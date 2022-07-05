@@ -126,6 +126,8 @@ public:
 		return m_dragging;
 	}
 
+	QList<TimePos> getPositions();
+
 	inline const timeMap & getTimeMap() const
 	{
 		return m_timeMap;

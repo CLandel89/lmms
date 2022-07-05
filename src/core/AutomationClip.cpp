@@ -513,6 +513,16 @@ void AutomationClip::applyDragValue()
 
 
 
+QList<TimePos> AutomationClip::getPositions() {
+	QList<TimePos> positions;
+	for (auto pos : getTimeMap().keys())
+		positions.push_back(pos);
+	return positions;
+}
+
+
+
+
 float AutomationClip::valueAt( const TimePos & _time ) const
 {
 	QMutexLocker m(&m_clipMutex);

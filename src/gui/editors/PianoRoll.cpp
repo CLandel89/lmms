@@ -164,6 +164,7 @@ PianoRoll::PianoRoll() :
 	m_noteLenModel(),
 	m_scaleModel(),
 	m_chordModel(),
+	m_detuningShiftModel(50, 1, 99, nullptr, tr("¢")),
 	m_midiClip( nullptr ),
 	m_currentPosition(),
 	m_recording( false ),
@@ -1651,6 +1652,56 @@ void PianoRoll::mousePressEvent(QMouseEvent * me )
 		detuningClip = n->detuning()->automationClip();
 		connect(detuningClip.data(), SIGNAL(dataChanged()), this, SLOT(update()));
 		getGUI()->automationEditor()->open(detuningClip);
+		return;
+	}
+
+	if (m_editMode == ModeEditDetuningShift && noteUnderMouse() &&
+			(me->button() == Qt::LeftButton || me->button() == Qt::RightButton))
+	{
+		float change = m_detuningShiftModel.value() / 100.0f;
+		if (me->button() == Qt::RightButton)
+			change = -change;
+		Note* note = noteUnderMouse();
+		if (note->detuning() == nullptr)
+		{
+			note->createDetuning();
+		}
+		AutomationClip* detuningClip = note->detuning()->automationClip();
+		// Check if there is already detuning data.
+		// If not, put "0.0" at both ends of the note.
+		// If there is, a more sophisticated handling is applied.
+		bool hasFirst = false, hasLater = false;
+		for (auto pos : detuningClip->getPositions()) {
+			if (pos == 0)
+				hasFirst = true;
+			if (pos > 0)
+				hasLater = true;
+		}
+		if (! hasFirst)
+			detuningClip->putValue(0, 0.0f);
+		if (! hasLater)
+			detuningClip->putValue(
+				note->length(),
+				detuningClip->valueAt(0)
+			);
+		// With that in check, shift all values.
+		for (auto pos : detuningClip->getPositions()) {
+			float newVal = detuningClip->valueAt(pos) + change;
+			detuningClip->putValue(pos, newVal);
+		}
+		// If all values are back to "0.0", delete detuning data.
+		bool allZero = true;
+		for (auto pos : detuningClip->getPositions()) {
+			if (detuningClip->valueAt(pos) != 0.0f)
+				allZero = false;
+		}
+		if (allZero) {
+			for (auto pos : detuningClip->getPositions())
+				detuningClip->removeNode(pos);
+		}
+
+		update();
+		Engine::getSong()->setModified();
 		return;
 	}
 
@@ -3693,6 +3744,7 @@ void PianoRoll::paintEvent(QPaintEvent * pe )
 			case ModeErase: cursor = s_toolErase; break;
 			case ModeSelect: cursor = s_toolSelect; break;
 			case ModeEditDetuning: cursor = s_toolOpen; break;
+			case ModeEditDetuningShift: cursor = s_toolOpen; break;
 			case ModeEditKnife: cursor = s_toolKnife; break;
 		}
 		QPoint mousePosition = mapFromGlobal( QCursor::pos() );
@@ -4743,6 +4795,11 @@ PianoRollWindow::PianoRollWindow() :
 	QAction* eraseAction = editModeGroup->addAction( embed::getIconPixmap( "edit_erase" ), tr("Erase mode (Shift+E)" ) );
 	QAction* selectAction = editModeGroup->addAction( embed::getIconPixmap( "edit_select" ), tr( "Select mode (Shift+S)" ) );
 	QAction* pitchBendAction = editModeGroup->addAction( embed::getIconPixmap( "automation" ), tr("Pitch Bend mode (Shift+T)" ) );
+	QAction* pitchShiftAction = editModeGroup->addAction( embed::getIconPixmap( "automation" ), tr("Pitch Shift mode" ) );
+	this->m_shiftSpinBox = new LcdSpinBox(2, notesActionsToolBar, tr("¢"));
+	m_shiftSpinBox->setModel(&m_editor->m_detuningShiftModel);
+	m_shiftSpinBox->setLabel(tr("¢"));
+	m_shiftSpinBox->setToolTip(tr("The detune amount for Pitch Shift mode in cents"));
 
 	drawAction->setChecked( true );
 
@@ -4775,6 +4832,8 @@ PianoRollWindow::PianoRollWindow() :
 	notesActionsToolBar->addAction( eraseAction );
 	notesActionsToolBar->addAction( selectAction );
 	notesActionsToolBar->addAction( pitchBendAction );
+	notesActionsToolBar->addAction( pitchShiftAction );
+	notesActionsToolBar->addWidget(m_shiftSpinBox);
 	notesActionsToolBar->addSeparator();
 	notesActionsToolBar->addWidget(quantizeButton);
 
