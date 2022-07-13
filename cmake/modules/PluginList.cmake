@@ -38,6 +38,7 @@ SET(LMMS_PLUGIN_LIST
 	Eq
 	Flanger
 	HydrogenImport
+	HyperPipe
 	LadspaBrowser
 	LadspaEffect
 	Lv2Effect
