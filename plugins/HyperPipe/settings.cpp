@@ -4,11 +4,11 @@
 
 namespace lmms {
 
-void HyperPipe::saveSettings (QDomDocument &_doc, QDomElement &_this)
+void HyperPipe::saveSettings (QDomDocument &doc, QDomElement &parent)
 {
 }
 
-void HyperPipe::loadSettings (const QDomElement &_this)
+void HyperPipe::loadSettings (const QDomElement &preset)
 {
 }
 

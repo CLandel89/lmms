@@ -1,14 +1,19 @@
 #include "HyperPipe.h"
 
-namespace lmms::gui {
+namespace lmms::gui
+{
 
-HyperPipeView::HyperPipeView(Instrument *_instrument, QWidget *_parent) :
-        InstrumentView(_instrument, _parent)
+HyperPipeView::HyperPipeView(Instrument *instrument, QWidget *parent) :
+		InstrumentView(instrument, parent)
 {
 }
 
-HyperPipeView::~HyperPipeView() {}
+HyperPipeView::~HyperPipeView()
+{
+}
 
-void HyperPipeView::modelChanged() {}
+void HyperPipeView::modelChanged()
+{
+}
 
 } // namespace gui

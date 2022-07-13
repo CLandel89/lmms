@@ -39,57 +39,58 @@ class SampleBuffer;
 
 namespace gui
 {
-class automatableButtonGroup;
-class Knob;
-class PixmapButton;
-class TripleOscillatorView;
-} // namespace gui
+	class automatableButtonGroup;
+	class Knob;
+	class PixmapButton;
+	class TripleOscillatorView;
+}
 
 class HyperPipeNode : public Model
 {
 public:
-    HyperPipeNode(Model* _parent);
-    virtual ~HyperPipeNode();
+	HyperPipeNode(Model* parent);
+	virtual ~HyperPipeNode();
 };
 
 class HyperPipeOsc : HyperPipeNode
 {
 public:
-    HyperPipeOsc(Model* _parent);
-    virtual ~HyperPipeOsc();
+	HyperPipeOsc(Model* parent);
+	virtual ~HyperPipeOsc();
 };
 
 class HyperPipe;
 
 class HyperPipeSynth
 {
-    MM_OPERATORS
+	MM_OPERATORS
 public:
-    HyperPipeSynth(HyperPipe* _i, NotePlayHandle* _nph);
-    virtual ~HyperPipeSynth();
+	HyperPipeSynth(HyperPipe* parent, NotePlayHandle* nph);
+	virtual ~HyperPipeSynth();
 	std::array<float,2> processFrame(float freq, float srate);
-    float m_ph = 0;
+	float m_ph = 0.0f;
 private:
-    HyperPipe *m_parent;
-    NotePlayHandle *m_nph;
+	HyperPipe *m_parent;
+	NotePlayHandle *m_nph;
 };
 
-namespace gui {
-    class HyperPipeView;
+namespace gui
+{
+	class HyperPipeView;
 }
 
 class HyperPipe : public Instrument
 {
 	Q_OBJECT
 public:
-	HyperPipe(InstrumentTrack* _track);
+	HyperPipe(InstrumentTrack* track);
 	virtual ~HyperPipe();
-	void playNote(NotePlayHandle* _n, sampleFrame* _working_buffer) override;
-	void deleteNotePluginData(NotePlayHandle* _n) override;
-	void saveSettings(QDomDocument& _doc, QDomElement& _parent) override;
-	void loadSettings(const QDomElement& _this) override;
+	void playNote(NotePlayHandle* nph, sampleFrame* working_buffer) override;
+	void deleteNotePluginData(NotePlayHandle* nph) override;
+	void saveSettings(QDomDocument& doc, QDomElement& parent) override;
+	void loadSettings(const QDomElement& preset) override;
 	QString nodeName() const override;
-	gui::PluginView* instantiateView(QWidget* _parent) override;
+	gui::PluginView* instantiateView(QWidget* parent) override;
 private:
 	std::vector<HyperPipeNode> m_nodes;
 	friend class gui::HyperPipeView;
@@ -98,18 +99,15 @@ private:
 
 namespace gui
 {
-
-class HyperPipeView : public InstrumentView //InstrumentViewFixedSize
-{
-	Q_OBJECT
-public:
-	HyperPipeView(Instrument *_instrument, QWidget *_parent);
-	virtual ~HyperPipeView();
-private:
-	void modelChanged() override;
-};
-
-
-} // namespace gui
+	class HyperPipeView : public InstrumentView //InstrumentViewFixedSize
+	{
+		Q_OBJECT
+	public:
+		HyperPipeView(Instrument *instrument, QWidget *parent);
+		virtual ~HyperPipeView();
+	private:
+		void modelChanged() override;
+	};
+}
 
 } // namespace lmms

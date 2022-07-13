@@ -23,22 +23,21 @@
  */
 
 #include "HyperPipe.h"
+
 #include "AudioEngine.h"
 #include "AutomatableButton.h"
 #include "debug.h"
+#include "embed.h"
 #include "Engine.h"
 #include "InstrumentTrack.h"
 #include "Knob.h"
 #include "NotePlayHandle.h"
 #include "Oscillator.h"
 #include "PixmapButton.h"
-
-#include "embed.h"
 #include "plugin_export.h"
 
 namespace lmms
 {
-
 
 extern "C"
 {
@@ -58,53 +57,62 @@ Plugin::Descriptor PLUGIN_EXPORT hyperpipe_plugin_descriptor =
 
 } // extern "C"
 
-
-HyperPipe::HyperPipe (InstrumentTrack *_instrument_track) :
-	    Instrument(_instrument_track, &hyperpipe_plugin_descriptor)
+HyperPipe::HyperPipe (InstrumentTrack *instrument_track) :
+		Instrument(instrument_track, &hyperpipe_plugin_descriptor)
 {
 }
 
-HyperPipe::~HyperPipe() {}
+HyperPipe::~HyperPipe()
+{
+}
 
-QString HyperPipe::nodeName () const {
+QString HyperPipe::nodeName () const
+{
 	return hyperpipe_plugin_descriptor.name;
 }
 
-void HyperPipe::playNote (NotePlayHandle *_n, sampleFrame *_working_buffer)
+void HyperPipe::playNote (NotePlayHandle *nph, sampleFrame *working_buffer)
 {
-	if(_n->totalFramesPlayed() == 0 || _n->m_pluginData == nullptr) {
-        if (_n->m_pluginData != nullptr)
-	        delete static_cast<HyperPipeSynth*>(_n->m_pluginData);
-        _n->m_pluginData = new HyperPipeSynth(this, _n);
+	if (nph->totalFramesPlayed() == 0 || nph->m_pluginData == nullptr)
+	{
+		if (nph->m_pluginData != nullptr)
+		{
+			delete static_cast<HyperPipeSynth*>(nph->m_pluginData);
+		}
+		nph->m_pluginData = new HyperPipeSynth(this, nph);
 	}
-    HyperPipeSynth *synth = static_cast<HyperPipeSynth*>(_n->m_pluginData);
+	HyperPipeSynth *synth = static_cast<HyperPipeSynth*>(nph->m_pluginData);
 
-	const fpp_t frames = _n->framesLeftForCurrentPeriod();
-	const f_cnt_t offset = _n->noteOffset();
-    for (size_t i=0; i<frames; i++)
-        _working_buffer[offset+i] = synth->processFrame(
-			_n->frequency(),
+	const fpp_t frames = nph->framesLeftForCurrentPeriod();
+	const f_cnt_t offset = nph->noteOffset();
+	for (size_t i = 0; i < frames; i++) {
+		working_buffer[offset + i] = synth->processFrame(
+			nph->frequency(),
 			Engine::audioEngine()->processingSampleRate()
-			);
+		);
+	}
 
-	applyFadeIn(_working_buffer, _n);
-	applyRelease(_working_buffer, _n);
-	instrumentTrack()->processAudioBuffer(_working_buffer, frames + offset, _n);
+	applyFadeIn(working_buffer, nph);
+	applyRelease(working_buffer, nph);
+	instrumentTrack()->processAudioBuffer(working_buffer, frames + offset, nph);
 }
 
-void HyperPipe::deleteNotePluginData (NotePlayHandle *_n) {
-	delete static_cast<HyperPipeSynth*>(_n->m_pluginData);
+void HyperPipe::deleteNotePluginData (NotePlayHandle *nph)
+{
+	delete static_cast<HyperPipeSynth*>(nph->m_pluginData);
 }
 
-gui::PluginView* HyperPipe::instantiateView (QWidget *_parent) {
-	return new gui::HyperPipeView(this, _parent);
+gui::PluginView* HyperPipe::instantiateView (QWidget *parent)
+{
+	return new gui::HyperPipeView(this, parent);
 }
 
-
-extern "C" {
-    PLUGIN_EXPORT Plugin* lmms_plugin_main(Model* model, void*) {
-        return new HyperPipe(static_cast<InstrumentTrack *>(model));
-    }
+extern "C"
+{
+	PLUGIN_EXPORT Plugin* lmms_plugin_main(Model* model, void*)
+	{
+		return new HyperPipe(static_cast<InstrumentTrack *>(model));
+	}
 }
 
 } // namespace lmms
