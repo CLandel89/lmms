@@ -5,8 +5,7 @@
 namespace lmms
 {
 
-HyperPipeNode::HyperPipeNode (Model* parent) :
-		Model(parent)
+HyperPipeNode::HyperPipeNode ()
 {
 }
 
@@ -14,13 +13,20 @@ HyperPipeNode::~HyperPipeNode ()
 {
 }
 
-HyperPipeOsc::HyperPipeOsc (Model* model) :
-		HyperPipeNode(model)
+HyperPipeOsc::HyperPipeOsc () :
+		HyperPipeNode()
 {
 }
 
 HyperPipeOsc::~HyperPipeOsc ()
 {
+}
+
+float HyperPipeOsc::processFrame (float freq, float srate)
+{
+	m_ph += freq / srate;
+	m_ph = fraction(m_ph);
+	return hyperPipeShape(m_shape, m_ph, m_morph);
 }
 
 HyperPipeSynth::HyperPipeSynth (HyperPipe *parent, NotePlayHandle *nph) :
@@ -35,11 +41,8 @@ HyperPipeSynth::~HyperPipeSynth ()
 
 std::array<float,2> HyperPipeSynth::processFrame (float freq, float srate)
 {
-	m_ph += freq / srate;
-	m_ph = fraction(m_ph);
-	float l = m_ph<=0.7 ? 1.0 : -1.0;
-	float r = m_ph<=0.6 ? 1.0 : -1.0;
-	return {l, r};
+	float f = m_osc.processFrame(freq, srate);
+	return {f, f};
 }
 
 } // namespace lmms

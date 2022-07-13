@@ -27,7 +27,6 @@
 
 #include "Instrument.h"
 #include "InstrumentView.h"
-#include "AutomatableModel.h"
 
 #include <vector>
 
@@ -45,18 +44,35 @@ namespace gui
 	class TripleOscillatorView;
 }
 
-class HyperPipeNode : public Model
+class HyperPipeNode
 {
 public:
-	HyperPipeNode(Model* parent);
+	HyperPipeNode();
 	virtual ~HyperPipeNode();
 };
+
+enum class HyperPipeShapes
+{
+	NOISE,
+	SAW,
+	SINE,
+	SQR,
+	TRI,
+};
+
+float hyperPipeShape (HyperPipeShapes shape, float ph, float morph = 0.0f);
 
 class HyperPipeOsc : HyperPipeNode
 {
 public:
-	HyperPipeOsc(Model* parent);
+	HyperPipeOsc();
 	virtual ~HyperPipeOsc();
+	float processFrame (float freq, float srate);
+	HyperPipeShapes m_shape = HyperPipeShapes::SAW;
+	float m_morph;
+private:
+	float m_ph = 0.0f;
+	size_t m_n = 0;
 };
 
 class HyperPipe;
@@ -68,10 +84,10 @@ public:
 	HyperPipeSynth(HyperPipe* parent, NotePlayHandle* nph);
 	virtual ~HyperPipeSynth();
 	std::array<float,2> processFrame(float freq, float srate);
-	float m_ph = 0.0f;
 private:
 	HyperPipe *m_parent;
 	NotePlayHandle *m_nph;
+	HyperPipeOsc m_osc;
 };
 
 namespace gui
@@ -95,17 +111,6 @@ private:
 	std::vector<HyperPipeNode> m_nodes;
 	friend class gui::HyperPipeView;
 };
-
-enum class HyperPipeShapes
-{
-	NOISE,
-	SAW,
-	SINE,
-	SQR,
-	TRI,
-};
-
-float hyperPipeShape (HyperPipeShapes shape, float ph, size_t n = 0, float morph = 0.0f);
 
 namespace gui
 {
