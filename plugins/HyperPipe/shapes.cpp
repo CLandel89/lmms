@@ -7,6 +7,31 @@
 namespace lmms
 {
 
+inline float saw (float ph, float morph)
+{
+	// left and right edge of each segment
+	float le, re;
+	le = 0.0f;
+	re = morph * 0.25f;
+	if (ph < re)
+	{
+		//0.0...1.0
+		return ph / re;
+	}
+	le = re;
+	re = 1.0f - morph * 0.25f;
+	if (ph < re)
+	{
+		//this is the main (saw) shape
+		//1.0...-1.0
+		return 1.0f - 2.0f * (ph - le) / (re - le);
+	}
+	le = re;
+	re = 1.0f;
+	//-1.0...0.0
+	return -1.0f + (ph - le) / (re - le);
+}
+
 inline float sine (float ph, float morph)
 {
 	float s = sinf(ph * F_2PI);
@@ -15,30 +40,68 @@ inline float sine (float ph, float morph)
 	return s + morph * noise;
 }
 
-inline float sqr (float ph, size_t n, float morph)
+inline float sqr (float ph, float morph)
 {
-	if (morph > 0.999f) { morph = 0.999f; }
-	bool pulse;
-	if (n % 10 < 5)
+	// left and right edge of each segment
+	float le, re;
+	le = 0.0f;
+	re = 0.5f - morph * 0.5f;
+	if (ph < re)
 	{
-		pulse = ph < 0.5f + morph * 0.5f;
+		return 1.0f;
 	}
-	else
+	le = re;
+	re = 0.5f + morph * 0.5f;
+	if (ph < re)
 	{
-		// FM does not like shapes with asymmetric distribution
-		pulse = ph >= 0.5f + morph * 0.5f;
+		return 1.0f - 2.0f * (ph - le) / (re - le);
 	}
-	return pulse ? 1.0f : -1.0f;
+	//re = 1.0f;
+	return -1.0f;
 }
 
 inline float tri (float ph, float morph)
-{}
+{
+	// left and right edge of each segment
+	float le, re;
+	le = 0.0;
+	re = 0.25f - morph * 0.25f;
+	if (ph < re)
+	{
+		return ph / re;
+	}
+	//le = re;
+	re = 0.25f + morph * 0.25f;
+	if (ph < re)
+	{
+		return 1.0f;
+	}
+	le = re;
+	re = 0.75f - morph * 0.25f;
+	if (ph < re)
+	{
+		return 1.0f - 2.0f * (ph - le) / (re - le);
+	}
+	le = re;
+	re = 0.75f + morph * 0.25f;
+	if (ph < re)
+	{
+		return -1.0f;
+	}
+	le = re;
+	re = 1.0f;
+	return -1.0f + (ph - le) / (re - le);
+}
 
-float hyperPipeShape (HyperPipeShapes shape, float ph, size_t n, float morph)
+float hyperPipeShape (HyperPipeShapes shape, float ph, float morph)
 {
 	switch (shape)
 	{
 		case HyperPipeShapes::NOISE: return 1.0f - fastRandf(2.0f);
+		case HyperPipeShapes::SAW:   return saw(ph, morph);
+		case HyperPipeShapes::SINE:  return sine(ph, morph);
+		case HyperPipeShapes::SQR:   return sqr(ph, morph);
+		case HyperPipeShapes::TRI:   return tri(ph, morph);
 	}
 }
 
