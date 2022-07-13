@@ -67,7 +67,7 @@ class HyperPipeSynth
 public:
     HyperPipeSynth(HyperPipe* _i, NotePlayHandle* _nph);
     virtual ~HyperPipeSynth();
-    IntModel m_wave_shape_model, m_mod_algo_model;
+	std::array<float,2> processFrame(float freq, float srate);
     float m_ph = 0;
 private:
     HyperPipe *m_parent;

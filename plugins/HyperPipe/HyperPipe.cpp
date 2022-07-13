@@ -81,23 +81,18 @@ void HyperPipe::playNote (NotePlayHandle *_n, sampleFrame *_working_buffer)
 
 	const fpp_t frames = _n->framesLeftForCurrentPeriod();
 	const f_cnt_t offset = _n->noteOffset();
-
-    float ph_div_sample = _n->frequency() / Engine::audioEngine()->processingSampleRate();
-    for (size_t i=0; i<frames; i++) {
-        synth->m_ph += ph_div_sample;
-        synth->m_ph -= floor(synth->m_ph);
-		float l = synth->m_ph<=0.5 ? 1.0 : -1.0;
-		float r = synth->m_ph<=0.6 ? 1.0 : -1.0;
-        _working_buffer[offset+i] = {l, r};
-    }
+    for (size_t i=0; i<frames; i++)
+        _working_buffer[offset+i] = synth->processFrame(
+			_n->frequency(),
+			Engine::audioEngine()->processingSampleRate()
+			);
 
 	applyFadeIn(_working_buffer, _n);
 	applyRelease(_working_buffer, _n);
 	instrumentTrack()->processAudioBuffer(_working_buffer, frames + offset, _n);
 }
 
-void HyperPipe::deleteNotePluginData (NotePlayHandle *_n)
-{
+void HyperPipe::deleteNotePluginData (NotePlayHandle *_n) {
 	delete static_cast<HyperPipeSynth*>(_n->m_pluginData);
 }
 
