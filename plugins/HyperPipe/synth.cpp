@@ -41,6 +41,8 @@ HyperPipeSynth::~HyperPipeSynth ()
 
 std::array<float,2> HyperPipeSynth::processFrame (float freq, float srate)
 {
+	m_osc.m_shape = (HyperPipeShapes) m_parent->m_shape.value();
+	m_osc.m_morph = m_parent->m_morph.value();
 	float f = m_osc.processFrame(freq, srate);
 	return {f, f};
 }

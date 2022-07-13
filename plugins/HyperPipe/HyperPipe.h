@@ -25,8 +25,10 @@
 
 #pragma once
 
+#include "ComboBox.h"
 #include "Instrument.h"
 #include "InstrumentView.h"
+#include "Knob.h"
 
 #include <vector>
 
@@ -34,15 +36,6 @@ namespace lmms
 {
 
 class NotePlayHandle;
-class SampleBuffer;
-
-namespace gui
-{
-	class automatableButtonGroup;
-	class Knob;
-	class PixmapButton;
-	class TripleOscillatorView;
-}
 
 class HyperPipeNode
 {
@@ -107,9 +100,10 @@ public:
 	void loadSettings(const QDomElement& preset) override;
 	QString nodeName() const override;
 	gui::PluginView* instantiateView(QWidget* parent) override;
-private:
-	std::vector<HyperPipeNode> m_nodes;
-	friend class gui::HyperPipeView;
+	ComboBoxModel m_shape;
+	FloatModel m_morph;
+// private:
+// 	friend class gui::HyperPipeView;
 };
 
 namespace gui
@@ -118,10 +112,12 @@ namespace gui
 	{
 		Q_OBJECT
 	public:
-		HyperPipeView(Instrument *instrument, QWidget *parent);
+		HyperPipeView(HyperPipe *instrument, QWidget *parent);
 		virtual ~HyperPipeView();
 	private:
 		void modelChanged() override;
+		ComboBox m_shape;
+		Knob m_morph;
 	};
 }
 
