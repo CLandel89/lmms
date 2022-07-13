@@ -36,7 +36,7 @@ HyperPipeSynth::~HyperPipeSynth ()
 std::array<float,2> HyperPipeSynth::processFrame (float freq, float srate)
 {
 	m_ph += freq / srate;
-	m_ph -= floor(m_ph);
+	m_ph = fraction(m_ph);
 	float l = m_ph<=0.7 ? 1.0 : -1.0;
 	float r = m_ph<=0.6 ? 1.0 : -1.0;
 	return {l, r};

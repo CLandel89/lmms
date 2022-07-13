@@ -2,7 +2,8 @@
 
 #include <QDomElement>
 
-namespace lmms {
+namespace lmms
+{
 
 void HyperPipe::saveSettings (QDomDocument &doc, QDomElement &parent)
 {

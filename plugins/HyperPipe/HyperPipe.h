@@ -96,6 +96,14 @@ private:
 	friend class gui::HyperPipeView;
 };
 
+enum class HyperPipeShapes
+{
+	SINE,
+	SQR,
+	TRI,
+};
+
+std::array<float,2> hyperPipeShape (HyperPipeShapes shape, float ph, size_t n = 0, float morph = 0.0f);
 
 namespace gui
 {
