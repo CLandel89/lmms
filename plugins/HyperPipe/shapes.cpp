@@ -7,6 +7,14 @@
 namespace lmms
 {
 
+inline float sine (float ph, float morph);
+
+inline float noise (float ph, float morph)
+{
+	float r = (1.0f - morph) * fastRandf(1.0f) - 0.5f;
+	return sine(ph + r, morph);
+}
+
 inline float saw (float ph, float morph)
 {
 	// left and right edge of each segment
@@ -35,9 +43,9 @@ inline float saw (float ph, float morph)
 inline float sine (float ph, float morph)
 {
 	float s = sinf(ph * F_2PI);
-	float noise = 1.0f - fastRandf(2.0f);
-	noise *= 1.0f - std::abs(s); //how much "room" on top or at the bottom?
-	return s + morph * noise;
+	float saw = ph; //a simplified version
+	saw = 1.0f - morph * saw;
+	return saw * s;
 }
 
 inline float sqr (float ph, float morph)
@@ -95,13 +103,20 @@ inline float tri (float ph, float morph)
 
 float hyperPipeShape (HyperPipeShapes shape, float ph, float morph)
 {
+	if (morph < 0.5f) {
+		morph += fastRandf(0.05f);
+	}
+	else {
+		morph -= fastRandf(0.05f);
+	}
 	switch (shape)
 	{
-		case HyperPipeShapes::NOISE: return 1.0f - fastRandf(2.0f);
-		case HyperPipeShapes::SAW:   return saw(ph, morph);
+		//the shapes with vertical edges really sound too loud
+		case HyperPipeShapes::NOISE: return noise(ph, morph);
+		case HyperPipeShapes::SAW:   return (0.4f + 0.5f * morph) * saw(ph, morph);
 		case HyperPipeShapes::SINE:  return sine(ph, morph);
-		case HyperPipeShapes::SQR:   return sqr(ph, morph);
-		case HyperPipeShapes::TRI:   return tri(ph, morph);
+		case HyperPipeShapes::SQR:   return (0.4f - 0.1f * morph) * sqr(ph, morph);
+		case HyperPipeShapes::TRI:   return (1.0f - 0.6f * morph) * tri(ph, morph);
 	}
 }
 
