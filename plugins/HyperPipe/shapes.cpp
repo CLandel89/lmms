@@ -1,27 +1,21 @@
 #include "HyperPipe.h"
 
-#include "lmms_math.h"
-
-#include <cmath>
-
 namespace lmms
 {
 
-inline float saw2tri (float ph, float morph)
+inline float saw2tri(float ph, float morph)
 {
 	// left and right edge of each segment
 	float le, re;
 	le = 0.0f;
 	re = morph * 0.25f;
-	if (ph < re)
-	{
+	if (ph < re) {
 		//0.0...1.0
 		return ph / re;
 	}
 	le = re;
 	re = 1.0f - morph * 0.25f;
-	if (ph < re)
-	{
+	if (ph < re) {
 		//this is the main (saw) shape
 		//1.0...-1.0
 		return 1.0f - 2.0f * (ph - le) / (re - le);
@@ -32,52 +26,46 @@ inline float saw2tri (float ph, float morph)
 	return -1.0f + (ph - le) / (re - le);
 }
 
-inline float sqr2saw (float ph, float morph)
+inline float sqr2saw(float ph, float morph)
 {
 	// left and right edge of each segment
 	float le, re;
 	le = 0.0f;
 	re = 0.5f - morph * 0.5f;
-	if (ph < re)
-	{
+	if (ph < re) {
 		return 1.0f;
 	}
 	le = re;
 	re = 0.5f + morph * 0.5f;
-	if (ph < re)
-	{
+	if (ph < re) {
 		return 1.0f - 2.0f * (ph - le) / (re - le);
 	}
 	//re = 1.0f;
 	return -1.0f;
 }
 
-inline float tri2sqr (float ph, float morph)
+inline float tri2sqr(float ph, float morph)
 {
 	// left and right edge of each segment
 	float le, re;
 	le = 0.0;
 	re = 0.25f - morph * 0.25f;
-	if (ph < re)
-	{
+	if (ph < re) {
 		return ph / re;
 	}
 	//le = re;
 	re = 0.25f + morph * 0.25f;
-	if (ph < re)
-	{
+	if (ph < re) {
 		return 1.0f;
 	}
 	le = re;
 	re = 0.75f - morph * 0.25f;
-	if (ph < re)
-	{
+	if (ph < re) {
 		return 1.0f - 2.0f * (ph - le) / (re - le);
 	}
 	le = re;
 	re = 0.75f + morph * 0.25f;
-	if (ph < re)
-	{
+	if (ph < re) {
 		return -1.0f;
 	}
 	le = re;

@@ -1,15 +1,13 @@
 #include "HyperPipe.h"
 
-#include <QDomElement>
-
 namespace lmms
 {
 
-void HyperPipe::saveSettings (QDomDocument &doc, QDomElement &parent)
+void HyperPipe::saveSettings (QDomDocument& doc, QDomElement& parent)
 {
 }
 
-void HyperPipe::loadSettings (const QDomElement &preset)
+void HyperPipe::loadSettings (const QDomElement& preset)
 {
 }
 

@@ -3,7 +3,7 @@
 namespace lmms::gui
 {
 
-HyperPipeView::HyperPipeView(HyperPipe *instrument, QWidget *parent) :
+HyperPipeView::HyperPipeView(HyperPipe* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent),
 		m_shape(this, "shape"),
 		m_jitter(this, "jitter")
@@ -14,10 +14,6 @@ HyperPipeView::HyperPipeView(HyperPipe *instrument, QWidget *parent) :
 }
 
 HyperPipeView::~HyperPipeView()
-{
-}
-
-void HyperPipeView::modelChanged()
 {
 }
 

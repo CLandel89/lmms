@@ -25,25 +25,28 @@
 
 #pragma once
 
+#include "AudioEngine.h"
 #include "ComboBox.h"
+#include "Engine.h"
 #include "Instrument.h"
 #include "InstrumentView.h"
+#include "InstrumentTrack.h"
 #include "Knob.h"
-
-#include <vector>
+#include "lmms_math.h"
+#include "NotePlayHandle.h"
+#include "plugin_export.h"
 
 namespace lmms
 {
 
 class HyperPipe;
-class NotePlayHandle;
 
 class HyperPipeNode
 {
 public:
 	HyperPipeNode();
 	virtual ~HyperPipeNode();
-	virtual float processFrame (float freq, float srate) = 0;
+	virtual float processFrame(float freq, float srate) = 0;
 	virtual void updateFromUI(HyperPipe* instrument) = 0;
 };
 
@@ -99,7 +102,7 @@ private:
 	HyperPipe *m_parent;
 	NotePlayHandle *m_nph;
 	HyperPipeShapes myOsc;
-	HyperPipeNode* m_lastNode;
+	HyperPipeNode *m_lastNode;
 };
 
 namespace gui
@@ -121,8 +124,6 @@ public:
 	gui::PluginView* instantiateView(QWidget* parent) override;
 	FloatModel m_shape;
 	FloatModel m_jitter;
-// private:
-// 	friend class gui::HyperPipeView;
 };
 
 namespace gui
@@ -131,10 +132,9 @@ namespace gui
 	{
 		Q_OBJECT
 	public:
-		HyperPipeView(HyperPipe *instrument, QWidget *parent);
+		HyperPipeView(HyperPipe* instrument, QWidget* parent);
 		virtual ~HyperPipeView();
 	private:
-		void modelChanged() override;
 		Knob m_shape;
 		Knob m_jitter;
 	};

@@ -24,18 +24,6 @@
 
 #include "HyperPipe.h"
 
-#include "AudioEngine.h"
-#include "AutomatableButton.h"
-#include "debug.h"
-#include "embed.h"
-#include "Engine.h"
-#include "InstrumentTrack.h"
-#include "Knob.h"
-#include "NotePlayHandle.h"
-#include "Oscillator.h"
-#include "PixmapButton.h"
-#include "plugin_export.h"
-
 namespace lmms
 {
 
@@ -57,7 +45,7 @@ Plugin::Descriptor PLUGIN_EXPORT hyperpipe_plugin_descriptor =
 
 } // extern "C"
 
-HyperPipe::HyperPipe (InstrumentTrack *instrument_track) :
+HyperPipe::HyperPipe(InstrumentTrack* instrument_track) :
 		Instrument(instrument_track, &hyperpipe_plugin_descriptor),
 		m_shape(0.0f, -3.0f, 3.0f, 0.01f, this, tr("shape")),
 		m_jitter(0.0f, -3.0f, 3.0f, 0.01f, this, tr("jitter"))
@@ -68,23 +56,19 @@ HyperPipe::~HyperPipe()
 {
 }
 
-QString HyperPipe::nodeName () const
-{
+QString HyperPipe::nodeName() const {
 	return hyperpipe_plugin_descriptor.name;
 }
 
-void HyperPipe::playNote (NotePlayHandle *nph, sampleFrame *working_buffer)
+void HyperPipe::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
 {
-	if (nph->totalFramesPlayed() == 0 || nph->m_pluginData == nullptr)
-	{
-		if (nph->m_pluginData != nullptr)
-		{
+	if (nph->totalFramesPlayed() == 0 || nph->m_pluginData == nullptr) {
+		if (nph->m_pluginData != nullptr) {
 			delete static_cast<HyperPipeSynth*>(nph->m_pluginData);
 		}
 		nph->m_pluginData = new HyperPipeSynth(this, nph);
 	}
 	HyperPipeSynth *synth = static_cast<HyperPipeSynth*>(nph->m_pluginData);
-
 	const fpp_t frames = nph->framesLeftForCurrentPeriod();
 	const f_cnt_t offset = nph->noteOffset();
 	for (size_t i = 0; i < frames; i++) {
@@ -93,27 +77,22 @@ void HyperPipe::playNote (NotePlayHandle *nph, sampleFrame *working_buffer)
 			Engine::audioEngine()->processingSampleRate()
 		);
 	}
-
 	applyFadeIn(working_buffer, nph);
 	applyRelease(working_buffer, nph);
 	instrumentTrack()->processAudioBuffer(working_buffer, frames + offset, nph);
 }
 
-void HyperPipe::deleteNotePluginData (NotePlayHandle *nph)
-{
+void HyperPipe::deleteNotePluginData(NotePlayHandle* nph) {
 	delete static_cast<HyperPipeSynth*>(nph->m_pluginData);
 }
 
-gui::PluginView* HyperPipe::instantiateView (QWidget *parent)
-{
+gui::PluginView* HyperPipe::instantiateView(QWidget* parent) {
 	return new gui::HyperPipeView(this, parent);
 }
 
-extern "C"
-{
-	PLUGIN_EXPORT Plugin* lmms_plugin_main(Model* model, void*)
-	{
-		return new HyperPipe(static_cast<InstrumentTrack *>(model));
+extern "C" {
+	PLUGIN_EXPORT Plugin* lmms_plugin_main(Model* model, void*) {
+		return new HyperPipe(static_cast<InstrumentTrack*>(model));
 	}
 }
 
