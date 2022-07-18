@@ -7,15 +7,7 @@
 namespace lmms
 {
 
-inline float sine (float ph, float morph);
-
-inline float noise (float ph, float morph)
-{
-	float r = (1.0f - morph) * fastRandf(1.0f) - 0.5f;
-	return sine(ph + r, morph);
-}
-
-inline float saw (float ph, float morph)
+inline float saw2tri (float ph, float morph)
 {
 	// left and right edge of each segment
 	float le, re;
@@ -40,15 +32,7 @@ inline float saw (float ph, float morph)
 	return -1.0f + (ph - le) / (re - le);
 }
 
-inline float sine (float ph, float morph)
-{
-	float s = sinf(ph * F_2PI);
-	float saw = ph; //a simplified version
-	saw = 1.0f - morph * saw;
-	return saw * s;
-}
-
-inline float sqr (float ph, float morph)
+inline float sqr2saw (float ph, float morph)
 {
 	// left and right edge of each segment
 	float le, re;
@@ -68,7 +52,7 @@ inline float sqr (float ph, float morph)
 	return -1.0f;
 }
 
-inline float tri (float ph, float morph)
+inline float tri2sqr (float ph, float morph)
 {
 	// left and right edge of each segment
 	float le, re;
@@ -101,23 +85,37 @@ inline float tri (float ph, float morph)
 	return -1.0f + (ph - le) / (re - le);
 }
 
-float hyperPipeShape (HyperPipeShapes shape, float ph, float morph)
+HyperPipeShapes::HyperPipeShapes()
 {
-	if (morph < 0.5f) {
-		morph += fastRandf(0.05f);
+}
+
+HyperPipeShapes::~HyperPipeShapes()
+{
+}
+
+float HyperPipeShapes::shape(float ph)
+{
+	float shape = m_shape + fastRandf(m_jitter);
+	while (shape < 0.0f) { shape += 3.0f; }
+	while (shape >= 3.0f) { shape -= 3.0f; }
+	float morph = fraction(shape);
+	// amp: the shapes with vertical edges sound too loud
+	if (shape < 1.0f) {
+		float amp = 0.4f + 0.6f * morph;
+		return amp * saw2tri(ph, morph);
 	}
-	else {
-		morph -= fastRandf(0.05f);
+	if (shape < 2.0f) {
+		float amp = 1.0f - 0.7f * morph;
+		return amp * tri2sqr(ph, morph);
 	}
-	switch (shape)
-	{
-		//the shapes with vertical edges really sound too loud
-		case HyperPipeShapes::NOISE: return noise(ph, morph);
-		case HyperPipeShapes::SAW:   return (0.4f + 0.5f * morph) * saw(ph, morph);
-		case HyperPipeShapes::SINE:  return sine(ph, morph);
-		case HyperPipeShapes::SQR:   return (0.4f - 0.1f * morph) * sqr(ph, morph);
-		case HyperPipeShapes::TRI:   return (1.0f - 0.6f * morph) * tri(ph, morph);
-	}
+	float amp = 0.3f + 0.1f * morph;
+	return amp * sqr2saw(ph, morph);
+}
+
+void HyperPipeShapes::updateFromUI(HyperPipe* instrument)
+{
+	m_shape = instrument->m_shape.value();
+	m_jitter = instrument->m_jitter.value();
 }
 
 }

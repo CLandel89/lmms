@@ -35,6 +35,7 @@
 namespace lmms
 {
 
+class HyperPipe;
 class NotePlayHandle;
 
 class HyperPipeNode
@@ -43,33 +44,49 @@ public:
 	HyperPipeNode();
 	virtual ~HyperPipeNode();
 	virtual float processFrame (float freq, float srate) = 0;
+	virtual void updateFromUI(HyperPipe* instrument) = 0;
 };
 
-enum class HyperPipeShapes
+class HyperPipeNoise : public HyperPipeNode
 {
-	NOISE,
-	SAW,
-	SINE,
-	SQR,
-	TRI,
+public:
+	HyperPipeNoise();
+	virtual ~HyperPipeNoise();
+	float processFrame(float freq, float srate);
 };
 
-float hyperPipeShape (HyperPipeShapes shape, float ph, float morph = 0.0f);
-
-class HyperPipeOsc : HyperPipeNode
+class HyperPipeOsc : public HyperPipeNode
 {
 public:
 	HyperPipeOsc();
 	virtual ~HyperPipeOsc();
-	float processFrame (float freq, float srate);
-	HyperPipeShapes m_shape = HyperPipeShapes::SAW;
-	float m_morph;
+	float processFrame(float freq, float srate);
 private:
+	virtual float shape(float ph) = 0;
 	float m_ph = 0.0f;
-	size_t m_n = 0;
 };
 
-class HyperPipe;
+class HyperPipeSine : public HyperPipeOsc
+{
+public:
+	HyperPipeSine();
+	virtual ~HyperPipeSine();
+	float m_sawify = 0.0f;
+private:
+	float shape(float ph);
+};
+
+class HyperPipeShapes : public HyperPipeOsc
+{
+public:
+	HyperPipeShapes();
+	virtual ~HyperPipeShapes();
+	void updateFromUI(HyperPipe* instrument);
+	float m_shape = 0.0f;
+	float m_jitter = 0.0f;
+private:
+	float shape(float ph);
+};
 
 class HyperPipeSynth
 {
@@ -81,7 +98,8 @@ public:
 private:
 	HyperPipe *m_parent;
 	NotePlayHandle *m_nph;
-	HyperPipeOsc m_osc;
+	HyperPipeShapes myOsc;
+	HyperPipeNode* m_lastNode;
 };
 
 namespace gui
@@ -101,8 +119,8 @@ public:
 	void loadSettings(const QDomElement& preset) override;
 	QString nodeName() const override;
 	gui::PluginView* instantiateView(QWidget* parent) override;
-	ComboBoxModel m_shape;
-	FloatModel m_morph;
+	FloatModel m_shape;
+	FloatModel m_jitter;
 // private:
 // 	friend class gui::HyperPipeView;
 };
@@ -117,8 +135,8 @@ namespace gui
 		virtual ~HyperPipeView();
 	private:
 		void modelChanged() override;
-		ComboBox m_shape;
-		Knob m_morph;
+		Knob m_shape;
+		Knob m_jitter;
 	};
 }
 

@@ -6,11 +6,11 @@ namespace lmms::gui
 HyperPipeView::HyperPipeView(HyperPipe *instrument, QWidget *parent) :
 		InstrumentView(instrument, parent),
 		m_shape(this, "shape"),
-		m_morph(this, "morph")
+		m_jitter(this, "jitter")
 {
 	m_shape.setModel(&instrument->m_shape);
-	m_morph.move(100, 0);
-	m_morph.setModel(&instrument->m_morph);
+	m_jitter.setModel(&instrument->m_jitter);
+	m_jitter.move(40, 0);
 }
 
 HyperPipeView::~HyperPipeView()

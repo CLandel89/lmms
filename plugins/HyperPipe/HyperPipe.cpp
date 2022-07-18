@@ -59,14 +59,9 @@ Plugin::Descriptor PLUGIN_EXPORT hyperpipe_plugin_descriptor =
 
 HyperPipe::HyperPipe (InstrumentTrack *instrument_track) :
 		Instrument(instrument_track, &hyperpipe_plugin_descriptor),
-		m_morph(0.0f, 0.0f, 1.0f, 0.01f, this, tr("shape"))
+		m_shape(0.0f, -3.0f, 3.0f, 0.01f, this, tr("shape")),
+		m_jitter(0.0f, -3.0f, 3.0f, 0.01f, this, tr("jitter"))
 {
-	//these must be the same order as in the enum!
-	m_shape.addItem(tr("noise"));
-	m_shape.addItem(tr("saw"));
-	m_shape.addItem(tr("sine"));
-	m_shape.addItem(tr("square"));
-	m_shape.addItem(tr("triangle"));
 }
 
 HyperPipe::~HyperPipe()
