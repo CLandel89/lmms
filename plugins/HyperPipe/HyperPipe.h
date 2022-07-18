@@ -42,6 +42,7 @@ class HyperPipeNode
 public:
 	HyperPipeNode();
 	virtual ~HyperPipeNode();
+	virtual float processFrame (float freq, float srate) = 0;
 };
 
 enum class HyperPipeShapes
