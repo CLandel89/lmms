@@ -102,8 +102,8 @@ float HyperPipeShapes::shape(float ph)
 
 void HyperPipeShapes::updateFromUI(HyperPipe* instrument)
 {
-	m_shape = instrument->m_shape.value();
-	m_jitter = instrument->m_jitter.value();
+	m_shape = instrument->m_shapes.shape.value();
+	m_jitter = instrument->m_shapes.jitter.value();
 }
 
 }

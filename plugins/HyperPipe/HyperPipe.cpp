@@ -47,8 +47,13 @@ Plugin::Descriptor PLUGIN_EXPORT hyperpipe_plugin_descriptor =
 
 HyperPipe::HyperPipe(InstrumentTrack* instrument_track) :
 		Instrument(instrument_track, &hyperpipe_plugin_descriptor),
-		m_shape(0.0f, -3.0f, 3.0f, 0.01f, this, tr("shape")),
-		m_jitter(0.0f, -3.0f, 3.0f, 0.01f, this, tr("jitter"))
+		m_shapes(this)
+{
+}
+
+HyperPipe::Shapes::Shapes(HyperPipe* instrument) :
+		shape(0.0f, -3.0f, 3.0f, 0.01f, instrument, tr("shape")),
+		jitter(0.0f, -3.0f, 3.0f, 0.01f, instrument, tr("jitter"))
 {
 }
 

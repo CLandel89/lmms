@@ -127,8 +127,11 @@ public:
 	void loadSettings(const QDomElement& preset) override;
 	QString nodeName() const override;
 	gui::PluginView* instantiateView(QWidget* parent) override;
-	FloatModel m_shape;
-	FloatModel m_jitter;
+	struct Shapes {
+		Shapes(HyperPipe* instrument);
+		FloatModel shape;
+		FloatModel jitter;
+	} m_shapes;
 };
 
 namespace gui
@@ -140,8 +143,11 @@ namespace gui
 		HyperPipeView(HyperPipe* instrument, QWidget* parent);
 		virtual ~HyperPipeView();
 	private:
-		Knob m_shape;
-		Knob m_jitter;
+		struct Shapes {
+			Shapes(HyperPipeView* view);
+			Knob shape;
+			Knob jitter;
+		} m_shapes;
 	};
 }
 

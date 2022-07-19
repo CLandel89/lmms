@@ -5,12 +5,17 @@ namespace lmms::gui
 
 HyperPipeView::HyperPipeView(HyperPipe* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent),
-		m_shape(this, "shape"),
-		m_jitter(this, "jitter")
+		m_shapes(this)
 {
-	m_shape.setModel(&instrument->m_shape);
-	m_jitter.setModel(&instrument->m_jitter);
-	m_jitter.move(40, 0);
+	m_shapes.shape.setModel(&instrument->m_shapes.shape);
+	m_shapes.jitter.setModel(&instrument->m_shapes.jitter);
+	m_shapes.jitter.move(40, 0);
+}
+
+HyperPipeView::Shapes::Shapes(HyperPipeView* view) :
+		shape(view, "shape"),
+		jitter(view, "jitter")
+{
 }
 
 HyperPipeView::~HyperPipeView()
