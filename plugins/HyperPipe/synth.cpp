@@ -11,16 +11,26 @@ HyperPipeNode::~HyperPipeNode()
 {
 }
 
-float HyperPipeNoise::processFrame(float freq, float srate) {
-	return 1.0f - fastRandf(2.0f);
-}
-
 HyperPipeOsc::HyperPipeOsc() :
 		HyperPipeNode()
 {
 }
 
 HyperPipeOsc::~HyperPipeOsc()
+{
+}
+
+float HyperPipeOsc::processFrame(float freq, float srate) {
+	m_ph += freq / srate;
+	m_ph = fraction(m_ph);
+	return shape(m_ph);
+}
+
+HyperPipeSine::HyperPipeSine()
+{
+}
+
+HyperPipeSine::~HyperPipeSine()
 {
 }
 
@@ -31,10 +41,28 @@ float HyperPipeSine::shape(float ph) {
 	return saw * s;
 }
 
-float HyperPipeOsc::processFrame(float freq, float srate) {
-	m_ph += freq / srate;
-	m_ph = fraction(m_ph);
-	return shape(m_ph);
+void HyperPipeSine::updateFromUI(HyperPipe* instrument) {
+	// WIP
+}
+
+HyperPipeNoise::HyperPipeNoise() {
+	m_osc.m_sawify = 1.0f;
+}
+
+HyperPipeNoise::~HyperPipeNoise()
+{
+}
+
+float HyperPipeNoise::processFrame(float freq, float srate) {
+	float osc = m_osc.processFrame(freq, srate);
+	osc = (osc + 1.0f) / 2.0f; //0.0...1.0
+	osc = powf(osc, m_spike);
+	float r = 1.0f - fastRandf(2.0f);
+	return osc * r;
+}
+
+void HyperPipeNoise::updateFromUI(HyperPipe* instrument) {
+	// WIP
 }
 
 HyperPipeSynth::HyperPipeSynth(HyperPipe* parent, NotePlayHandle* nph) :

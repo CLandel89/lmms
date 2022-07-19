@@ -50,14 +50,6 @@ public:
 	virtual void updateFromUI(HyperPipe* instrument) = 0;
 };
 
-class HyperPipeNoise : public HyperPipeNode
-{
-public:
-	HyperPipeNoise();
-	virtual ~HyperPipeNoise();
-	float processFrame(float freq, float srate);
-};
-
 class HyperPipeOsc : public HyperPipeNode
 {
 public:
@@ -74,6 +66,7 @@ class HyperPipeSine : public HyperPipeOsc
 public:
 	HyperPipeSine();
 	virtual ~HyperPipeSine();
+	void updateFromUI(HyperPipe* instrument);
 	float m_sawify = 0.0f;
 private:
 	float shape(float ph);
@@ -89,6 +82,18 @@ public:
 	float m_jitter = 0.0f;
 private:
 	float shape(float ph);
+};
+
+class HyperPipeNoise : public HyperPipeNode
+{
+public:
+	HyperPipeNoise();
+	virtual ~HyperPipeNoise();
+	float processFrame(float freq, float srate);
+	void updateFromUI(HyperPipe* instrument);
+private:
+	HyperPipeSine m_osc;
+	float m_spike = 12.0f;
 };
 
 class HyperPipeSynth
