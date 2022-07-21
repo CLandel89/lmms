@@ -73,7 +73,9 @@ inline float tri2sqr(float ph, float morph)
 	return -1.0f + (ph - le) / (re - le);
 }
 
-HyperPipeShapes::HyperPipeShapes()
+HyperPipeShapes::HyperPipeShapes(shared_ptr<HyperPipeModel::Shapes> model) :
+		m_shape(model->m_shape),
+		m_jitter(model->m_jitter)
 {
 }
 
@@ -83,7 +85,7 @@ HyperPipeShapes::~HyperPipeShapes()
 
 float HyperPipeShapes::shape(float ph)
 {
-	float shape = m_shape + fastRandf(m_jitter);
+	float shape = m_shape->value() + fastRandf(m_jitter->value());
 	while (shape < 0.0f) { shape += 3.0f; }
 	while (shape >= 3.0f) { shape -= 3.0f; }
 	float morph = fraction(shape);
@@ -98,12 +100,6 @@ float HyperPipeShapes::shape(float ph)
 	}
 	float amp = 0.3f + 0.1f * morph;
 	return amp * sqr2saw(ph, morph);
-}
-
-void HyperPipeShapes::updateFromUI(HyperPipe* instrument)
-{
-	m_shape = instrument->m_shapes.shape.value();
-	m_jitter = instrument->m_shapes.jitter.value();
 }
 
 }

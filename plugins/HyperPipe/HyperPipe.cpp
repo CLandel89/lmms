@@ -47,13 +47,7 @@ Plugin::Descriptor PLUGIN_EXPORT hyperpipe_plugin_descriptor =
 
 HyperPipe::HyperPipe(InstrumentTrack* instrument_track) :
 		Instrument(instrument_track, &hyperpipe_plugin_descriptor),
-		m_shapes(this)
-{
-}
-
-HyperPipe::Shapes::Shapes(HyperPipe* instrument) :
-		shape(0.0f, -3.0f, 3.0f, 0.01f, instrument, tr("shape")),
-		jitter(0.0f, -3.0f, 3.0f, 0.01f, instrument, tr("jitter"))
+		m_model(make_unique<HyperPipeModel>(this))
 {
 }
 
@@ -71,7 +65,7 @@ void HyperPipe::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
 		if (nph->m_pluginData != nullptr) {
 			delete static_cast<HyperPipeSynth*>(nph->m_pluginData);
 		}
-		nph->m_pluginData = new HyperPipeSynth(this, nph);
+		nph->m_pluginData = new HyperPipeSynth(this, nph, m_model.get());
 	}
 	HyperPipeSynth *synth = static_cast<HyperPipeSynth*>(nph->m_pluginData);
 	const fpp_t frames = nph->framesLeftForCurrentPeriod();
