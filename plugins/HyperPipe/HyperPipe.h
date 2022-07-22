@@ -67,8 +67,9 @@ public:
 	struct Noise : public Node {
 		Noise(Instrument* instrument);
 		shared_ptr<FloatModel> m_spike;
-		shared_ptr<HyperPipeNode> instantiate(shared_ptr<Node> self, Instrument* instrument);
+		shared_ptr<HyperPipeNode> instantiate(shared_ptr<Node> self);
 		string name();
+		Instrument* m_instrument;
 	};
 	struct Sine : public Node {
 		Sine(Instrument* instrument);

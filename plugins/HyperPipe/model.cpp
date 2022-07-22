@@ -34,15 +34,16 @@ HyperPipeModel::HyperPipeModel(Instrument* instrument) {
 }
 
 HyperPipeModel::Noise::Noise(Instrument* instrument) :
-		m_spike(make_shared<FloatModel>(12.0f, 0.0f, 20.0f, 0.1f, instrument, tr("spike")))
+		m_spike(make_shared<FloatModel>(12.0f, 0.0f, 20.0f, 0.1f, instrument, tr("spike"))),
+		m_instrument(instrument)
 {
 	m_fmodels.emplace_back(m_spike);
 }
 
-shared_ptr<HyperPipeNode> HyperPipeModel::Noise::instantiate(shared_ptr<HyperPipeModel::Node> self, Instrument* instrument) {
+shared_ptr<HyperPipeNode> HyperPipeModel::Noise::instantiate(shared_ptr<HyperPipeModel::Node> self) {
 	return make_shared<HyperPipeNoise>(
 		static_pointer_cast<HyperPipeModel::Noise>(self),
-		instrument
+		m_instrument
 	);
 }
 
