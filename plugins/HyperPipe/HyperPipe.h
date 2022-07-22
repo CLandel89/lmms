@@ -1,6 +1,7 @@
 /*
- * HyperPipe.h - declaration of class HyperPipe synth with arbitrary
- *                      possibilities
+ * HyperPipe.h - declaration of all HyperPipe classes
+ *
+ * HyperPipe - synth with arbitrary possibilities
  *
  * Copyright (c) 2022 Christian Landel
  *
@@ -22,8 +23,6 @@
  * Boston, MA 02110-1301 USA.
  *
  */
-
-#pragma once
 
 #include "AudioEngine.h"
 #include "ComboBox.h"
@@ -153,11 +152,6 @@ private:
 	NotePlayHandle *m_nph;
 	shared_ptr<HyperPipeNode> m_lastNode;
 };
-
-namespace gui
-{
-	class HyperPipeView;
-}
 
 class HyperPipe : public Instrument
 {

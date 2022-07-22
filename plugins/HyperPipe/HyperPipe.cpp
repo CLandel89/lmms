@@ -1,5 +1,7 @@
 /*
- * HyperPipe.cpp - synth with arbitrary possibilities
+ * HyperPipe.cpp - implementation of class HyperPipe; C export
+ *
+ * HyperPipe - synth with arbitrary possibilities
  *
  * Copyright (c) 2022 Christian Landel
  *
@@ -27,23 +29,23 @@
 namespace lmms
 {
 
-extern "C"
-{
-
-Plugin::Descriptor PLUGIN_EXPORT hyperpipe_plugin_descriptor =
-{
-	LMMS_STRINGIFY(PLUGIN_NAME),
-	"HyperPipe",
-	QT_TRANSLATE_NOOP("PluginBrowser", "synth with arbitrary possibilities"),
-	"Christian Landel",
-	0x0110,
-	Plugin::Instrument,
-	new PluginPixmapLoader("logo"),
-	nullptr,
-	nullptr,
-};
-
-} // extern "C"
+extern "C" {
+	Plugin::Descriptor PLUGIN_EXPORT hyperpipe_plugin_descriptor =
+	{
+		LMMS_STRINGIFY(PLUGIN_NAME),
+		"HyperPipe",
+		QT_TRANSLATE_NOOP("PluginBrowser", "synth with arbitrary possibilities"),
+		"Christian Landel",
+		0x0110,
+		Plugin::Instrument,
+		new PluginPixmapLoader("logo"),
+		nullptr,
+		nullptr,
+	};
+	PLUGIN_EXPORT Plugin* lmms_plugin_main(Model* model, void*) {
+		return new HyperPipe(static_cast<InstrumentTrack*>(model));
+	}
+}
 
 HyperPipe::HyperPipe(InstrumentTrack* instrument_track) :
 		Instrument(instrument_track, &hyperpipe_plugin_descriptor),
@@ -85,14 +87,16 @@ void HyperPipe::deleteNotePluginData(NotePlayHandle* nph) {
 	delete static_cast<HyperPipeSynth*>(nph->m_pluginData);
 }
 
-gui::PluginView* HyperPipe::instantiateView(QWidget* parent) {
-	return new gui::HyperPipeView(this, parent);
+void HyperPipe::saveSettings (QDomDocument& doc, QDomElement& parent)
+{
 }
 
-extern "C" {
-	PLUGIN_EXPORT Plugin* lmms_plugin_main(Model* model, void*) {
-		return new HyperPipe(static_cast<InstrumentTrack*>(model));
-	}
+void HyperPipe::loadSettings (const QDomElement& preset)
+{
+}
+
+gui::PluginView* HyperPipe::instantiateView(QWidget* parent) {
+	return new gui::HyperPipeView(this, parent);
 }
 
 } // namespace lmms
