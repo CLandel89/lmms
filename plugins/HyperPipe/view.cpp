@@ -26,32 +26,32 @@
 
 #include "HyperPipe.h"
 
-namespace lmms::gui
+namespace lmms::gui::hyperpipe
 {
 
-HyperPipeView::HyperPipeView(HyperPipe* instrument, QWidget* parent) :
+HPView::HPView(HyperPipe* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent)
 {
 	auto curNode = instrument->m_model->m_nodes.back();
 	if (curNode->name() == "noise") {
-		m_curNode = make_unique<HyperPipeNoiseView>(
+		m_curNode = make_unique<HPNoiseView>(
 			this,
 			instrument,
-			static_pointer_cast<HyperPipeModel::Noise>(curNode)
+			static_pointer_cast<HPModel::Noise>(curNode)
 		);
 	}
 	else if (curNode->name() == "shapes") {
-		m_curNode = make_unique<HyperPipeShapesView>(
+		m_curNode = make_unique<HPShapesView>(
 			this,
 			instrument,
-			static_pointer_cast<HyperPipeModel::Shapes>(curNode)
+			static_pointer_cast<HPModel::Shapes>(curNode)
 		);
 	}
 	else if (curNode->name() == "sine") {
-		m_curNode = make_unique<HyperPipeSineView>(
+		m_curNode = make_unique<HPSineView>(
 			this,
 			instrument,
-			static_pointer_cast<HyperPipeModel::Sine>(curNode)
+			static_pointer_cast<HPModel::Sine>(curNode)
 		);
 	}
 	else {
@@ -59,41 +59,41 @@ HyperPipeView::HyperPipeView(HyperPipe* instrument, QWidget* parent) :
 	}
 }
 
-HyperPipeNodeView::~HyperPipeNodeView()
+HPNodeView::~HPNodeView()
 {
 }
 
-HyperPipeNoiseView::HyperPipeNoiseView(HyperPipeView* view, HyperPipe* instrument, shared_ptr<HyperPipeModel::Noise> model) :
+HPNoiseView::HPNoiseView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Noise> model) :
 		m_spike(view, "spike")
 {
 	m_spike.setModel(model->m_spike.get());
 }
-void HyperPipeNoiseView::hide() {
+void HPNoiseView::hide() {
 	m_spike.hide();
 }
-void HyperPipeNoiseView::show() {
+void HPNoiseView::show() {
 	m_spike.show();
 }
-string HyperPipeNoiseView::name() {
+string HPNoiseView::name() {
 	return "noise";
 }
 
-HyperPipeSineView::HyperPipeSineView(HyperPipeView* view, HyperPipe* instrument, shared_ptr<HyperPipeModel::Sine> model) :
+HPSineView::HPSineView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Sine> model) :
 		m_sawify(view, "sawify")
 {
 	m_sawify.setModel(model->m_sawify.get());
 }
-void HyperPipeSineView::hide() {
+void HPSineView::hide() {
 	m_sawify.hide();
 }
-void HyperPipeSineView::show() {
+void HPSineView::show() {
 	m_sawify.show();
 }
-string HyperPipeSineView::name() {
+string HPSineView::name() {
 	return "sine";
 }
 
-HyperPipeShapesView::HyperPipeShapesView(HyperPipeView* view, HyperPipe* instrument, shared_ptr<HyperPipeModel::Shapes> model) :
+HPShapesView::HPShapesView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Shapes> model) :
 		m_shape(view, "shape"),
 		m_jitter(view, "jitter")
 {
@@ -101,20 +101,20 @@ HyperPipeShapesView::HyperPipeShapesView(HyperPipeView* view, HyperPipe* instrum
 	m_jitter.setModel(model->m_jitter.get());
 	m_jitter.move(40, 0);
 }
-void HyperPipeShapesView::hide() {
+void HPShapesView::hide() {
 	m_shape.hide();
 	m_jitter.hide();
 }
-void HyperPipeShapesView::show() {
+void HPShapesView::show() {
 	m_shape.show();
 	m_jitter.show();
 }
-string HyperPipeShapesView::name() {
+string HPShapesView::name() {
 	return "shapes";
 }
 
-HyperPipeView::~HyperPipeView()
+HPView::~HPView()
 {
 }
 
-} // namespace gui
+} // namespace lmms::gui::hyperpipe

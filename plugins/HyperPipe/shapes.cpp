@@ -26,9 +26,6 @@
 
 #include "HyperPipe.h"
 
-namespace lmms
-{
-
 inline float saw2tri(float ph, float morph)
 {
 	// left and right edge of each segment
@@ -99,17 +96,20 @@ inline float tri2sqr(float ph, float morph)
 	return -1.0f + (ph - le) / (re - le);
 }
 
-HyperPipeShapes::HyperPipeShapes(shared_ptr<HyperPipeModel::Shapes> model) :
+namespace lmms::hyperpipe
+{
+
+HPShapes::HPShapes(shared_ptr<HPModel::Shapes> model) :
 		m_shape(model->m_shape),
 		m_jitter(model->m_jitter)
 {
 }
 
-HyperPipeShapes::~HyperPipeShapes()
+HPShapes::~HPShapes()
 {
 }
 
-float HyperPipeShapes::shape(float ph)
+float HPShapes::shape(float ph)
 {
 	float shape = m_shape->value() + fastRandf(m_jitter->value());
 	while (shape < 0.0f) { shape += 3.0f; }
@@ -128,4 +128,4 @@ float HyperPipeShapes::shape(float ph)
 	return amp * sqr2saw(ph, morph);
 }
 
-}
+} // namespace lmms::hyperpipe

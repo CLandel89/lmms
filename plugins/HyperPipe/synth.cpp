@@ -26,60 +26,60 @@
 
 #include "HyperPipe.h"
 
-namespace lmms
+namespace lmms::hyperpipe
 {
 
-HyperPipeNode::HyperPipeNode()
-{
-}
-
-HyperPipeNode::~HyperPipeNode()
+HPNode::HPNode()
 {
 }
 
-HyperPipeOsc::HyperPipeOsc() :
-		HyperPipeNode()
+HPNode::~HPNode()
 {
 }
 
-HyperPipeOsc::~HyperPipeOsc()
+HPOsc::HPOsc() :
+		HPNode()
 {
 }
 
-float HyperPipeOsc::processFrame(float freq, float srate) {
+HPOsc::~HPOsc()
+{
+}
+
+float HPOsc::processFrame(float freq, float srate) {
 	m_ph += freq / srate;
 	m_ph = fraction(m_ph);
 	return shape(m_ph);
 }
 
-HyperPipeSine::HyperPipeSine(shared_ptr<HyperPipeModel::Sine> model) :
+HPSine::HPSine(shared_ptr<HPModel::Sine> model) :
 		m_sawify(model->m_sawify)
 {
 }
 
-HyperPipeSine::~HyperPipeSine()
+HPSine::~HPSine()
 {
 }
 
-float HyperPipeSine::shape(float ph) {
+float HPSine::shape(float ph) {
 	float s = sinf(ph * F_2PI);
 	float saw = ph; //simplified and reversed
 	saw = 1.0f - m_sawify->value() * saw; //ready for multiplication with s
 	return saw * s;
 }
 
-HyperPipeNoise::HyperPipeNoise(shared_ptr<HyperPipeModel::Noise> model, Instrument* instrument) :
+HPNoise::HPNoise(shared_ptr<HPModel::Noise> model, Instrument* instrument) :
 		m_spike(model->m_spike),
-		m_osc(make_shared<HyperPipeModel::Sine>(instrument))
+		m_osc(make_shared<HPModel::Sine>(instrument))
 {
 	m_osc.m_sawify->setValue(1.0f);
 }
 
-HyperPipeNoise::~HyperPipeNoise()
+HPNoise::~HPNoise()
 {
 }
 
-float HyperPipeNoise::processFrame(float freq, float srate) {
+float HPNoise::processFrame(float freq, float srate) {
 	float osc = m_osc.processFrame(freq, srate);
 	osc = (osc + 1.0f) / 2.0f; //0.0...1.0
 	osc = powf(osc, m_spike->value());
@@ -87,20 +87,20 @@ float HyperPipeNoise::processFrame(float freq, float srate) {
 	return osc * r;
 }
 
-HyperPipeSynth::HyperPipeSynth(HyperPipe* instrument, NotePlayHandle* nph, HyperPipeModel* model) :
+HPSynth::HPSynth(HyperPipe* instrument, NotePlayHandle* nph, HPModel* model) :
 		m_instrument(instrument),
 		m_nph(nph),
 		m_lastNode(model->m_nodes.back()->instantiate(model->m_nodes.back()))
 {
 }
 
-HyperPipeSynth::~HyperPipeSynth()
+HPSynth::~HPSynth()
 {
 }
 
-array<float,2> HyperPipeSynth::processFrame(float freq, float srate) {
+array<float,2> HPSynth::processFrame(float freq, float srate) {
 	float f = m_lastNode->processFrame(freq, srate);
 	return {f, f};
 }
 
-} // namespace lmms
+} // namespace lmms::hyperpipe

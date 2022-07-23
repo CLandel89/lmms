@@ -1,5 +1,5 @@
 /*
- * HyperPipe.h - declaration of all HyperPipe classes
+ * HyperPipe.h - declaration of all HyperPipe classes; includes; "using namespace"s
  *
  * HyperPipe - synth with arbitrary possibilities
  *
@@ -39,119 +39,123 @@
 
 using namespace std;
 
-namespace lmms
+using namespace lmms;
+using namespace lmms::gui;
+
+namespace lmms::hyperpipe {}
+using namespace lmms::hyperpipe;
+namespace lmms::gui::hyperpipe {}
+using namespace lmms::gui::hyperpipe;
+
+namespace lmms::hyperpipe
 {
 
-// the syntheziser nodes and their abstract class
-class HyperPipeNode;
-class HyperPipeNoise;
-class HyperPipeSine;
-class HyperPipeShapes;
+class HPNode;
 
 /*!
  * The HyperPipe data model.
  * An instance of this class contains the plugin part of a preset.
  */
-class HyperPipeModel : QObject
+class HPModel : QObject
 {
 	Q_OBJECT
 public:
-	HyperPipeModel(Instrument* instrument);
+	HPModel(Instrument* instrument);
 	struct Node {
 		vector<shared_ptr<ComboBoxModel>> m_cbmodels;
 		vector<shared_ptr<FloatModel>> m_fmodels;
 		vector<shared_ptr<IntModel>> m_imodels;
-		virtual shared_ptr<HyperPipeNode> instantiate(shared_ptr<Node> self) = 0;
+		virtual shared_ptr<HPNode> instantiate(shared_ptr<Node> self) = 0;
 		virtual string name() = 0;
 	};
 	struct Noise : public Node {
 		Noise(Instrument* instrument);
 		shared_ptr<FloatModel> m_spike;
-		shared_ptr<HyperPipeNode> instantiate(shared_ptr<Node> self);
+		shared_ptr<HPNode> instantiate(shared_ptr<Node> self);
 		string name();
 		Instrument* m_instrument;
 	};
 	struct Sine : public Node {
 		Sine(Instrument* instrument);
 		shared_ptr<FloatModel> m_sawify;
-		shared_ptr<HyperPipeNode> instantiate(shared_ptr<Node> self);
+		shared_ptr<HPNode> instantiate(shared_ptr<Node> self);
 		string name();
 	};
 	struct Shapes : public Node {
 		Shapes(Instrument* instrument);
 		shared_ptr<FloatModel> m_shape;
 		shared_ptr<FloatModel> m_jitter;
-		shared_ptr<HyperPipeNode> instantiate(shared_ptr<Node> self);
+		shared_ptr<HPNode> instantiate(shared_ptr<Node> self);
 		string name();
 	};
 	vector<shared_ptr<Node>> m_nodes;
 };
 
-class HyperPipeNode : QObject
+class HPNode : QObject
 {
 	Q_OBJECT
 public:
-	HyperPipeNode();
-	virtual ~HyperPipeNode();
+	HPNode();
+	virtual ~HPNode();
 	virtual float processFrame(float freq, float srate) = 0;
 };
 
-class HyperPipeOsc : public HyperPipeNode
+class HPOsc : public HPNode
 {
 public:
-	HyperPipeOsc();
-	virtual ~HyperPipeOsc();
+	HPOsc();
+	virtual ~HPOsc();
 	float processFrame(float freq, float srate);
 private:
 	virtual float shape(float ph) = 0;
 	float m_ph = 0.0f;
 };
 
-class HyperPipeSine : public HyperPipeOsc
+class HPSine : public HPOsc
 {
 public:
-	HyperPipeSine(shared_ptr<HyperPipeModel::Sine> model);
-	virtual ~HyperPipeSine();
+	HPSine(shared_ptr<HPModel::Sine> model);
+	virtual ~HPSine();
 	shared_ptr<FloatModel> m_sawify;
 private:
 	float shape(float ph);
 };
 
-class HyperPipeShapes : public HyperPipeOsc
+class HPShapes : public HPOsc
 {
 public:
-	HyperPipeShapes(shared_ptr<HyperPipeModel::Shapes> model);
-	virtual ~HyperPipeShapes();
+	HPShapes(shared_ptr<HPModel::Shapes> model);
+	virtual ~HPShapes();
 	shared_ptr<FloatModel> m_shape;
 	shared_ptr<FloatModel> m_jitter;
 private:
 	float shape(float ph);
 };
 
-class HyperPipeNoise : public HyperPipeNode
+class HPNoise : public HPNode
 {
 public:
-	HyperPipeNoise(shared_ptr<HyperPipeModel::Noise> model, Instrument* instrument);
-	virtual ~HyperPipeNoise();
+	HPNoise(shared_ptr<HPModel::Noise> model, Instrument* instrument);
+	virtual ~HPNoise();
 	float processFrame(float freq, float srate);
 	shared_ptr<FloatModel> m_spike;
 private:
-	HyperPipeSine m_osc;
+	HPSine m_osc;
 };
 
 class HyperPipe;
 
-class HyperPipeSynth
+class HPSynth
 {
 	MM_OPERATORS
 public:
-	HyperPipeSynth(HyperPipe* instrument, NotePlayHandle* nph, HyperPipeModel* model);
-	virtual ~HyperPipeSynth();
+	HPSynth(HyperPipe* instrument, NotePlayHandle* nph, HPModel* model);
+	virtual ~HPSynth();
 	array<float,2> processFrame(float freq, float srate);
 private:
 	HyperPipe *m_instrument;
 	NotePlayHandle *m_nph;
-	shared_ptr<HyperPipeNode> m_lastNode;
+	shared_ptr<HPNode> m_lastNode;
 };
 
 class HyperPipe : public Instrument
@@ -166,62 +170,63 @@ public:
 	void loadSettings(const QDomElement& preset) override;
 	QString nodeName() const override;
 	gui::PluginView* instantiateView(QWidget* parent) override;
-	unique_ptr<HyperPipeModel> m_model;
+	unique_ptr<HPModel> m_model;
 };
 
-namespace gui
+} // namespace lmms::hyperpipe
+
+namespace lmms::gui::hyperpipe {
+
+class HPNodeView;
+
+class HPView : public InstrumentView //InstrumentViewFixedSize
 {
-	class HyperPipeNodeView;
+	Q_OBJECT
+public:
+	HPView(HyperPipe* instrument, QWidget* parent);
+	virtual ~HPView();
+private:
+	ComboBox m_ntype;
+	unique_ptr<HPNodeView> m_curNode;
+};
 
-	class HyperPipeView : public InstrumentView //InstrumentViewFixedSize
-	{
-		Q_OBJECT
-	public:
-		HyperPipeView(HyperPipe* instrument, QWidget* parent);
-		virtual ~HyperPipeView();
-	private:
-		ComboBox m_ntype;
-		unique_ptr<HyperPipeNodeView> m_curNode;
-	};
+class HPNodeView {
+public:
+	virtual ~HPNodeView();
+	virtual void hide() = 0;
+	virtual void show() = 0;
+	virtual string name() = 0;
+};
 
-	class HyperPipeNodeView {
-	public:
-		virtual ~HyperPipeNodeView();
-		virtual void hide() = 0;
-		virtual void show() = 0;
-		virtual string name() = 0;
-	};
+class HPNoiseView : public HPNodeView {
+public:
+	HPNoiseView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Noise> model);
+	void hide();
+	void show();
+	string name();
+private:
+	Knob m_spike;
+};
 
-	class HyperPipeNoiseView : public HyperPipeNodeView {
-	public:
-		HyperPipeNoiseView(HyperPipeView* view, HyperPipe* instrument, shared_ptr<HyperPipeModel::Noise> model);
-		void hide();
-		void show();
-		string name();
-	private:
-		Knob m_spike;
-	};
+class HPSineView : public HPNodeView {
+public:
+	HPSineView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Sine> model);
+	void hide();
+	void show();
+	string name();
+private:
+	Knob m_sawify;
+};
 
-	class HyperPipeSineView : public HyperPipeNodeView {
-	public:
-		HyperPipeSineView(HyperPipeView* view, HyperPipe* instrument, shared_ptr<HyperPipeModel::Sine> model);
-		void hide();
-		void show();
-		string name();
-	private:
-		Knob m_sawify;
-	};
+class HPShapesView : public HPNodeView {
+public:
+	HPShapesView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Shapes> model);
+	void hide();
+	void show();
+	string name();
+private:
+	Knob m_shape;
+	Knob m_jitter;
+};
 
-	class HyperPipeShapesView : public HyperPipeNodeView {
-	public:
-		HyperPipeShapesView(HyperPipeView* view, HyperPipe* instrument, shared_ptr<HyperPipeModel::Shapes> model);
-		void hide();
-		void show();
-		string name();
-	private:
-		Knob m_shape;
-		Knob m_jitter;
-	};
-}
-
-} // namespace lmms
+} // namespace lmms::gui::hyperpipe

@@ -26,7 +26,7 @@
 
 #include "HyperPipe.h"
 
-namespace lmms
+namespace lmms::hyperpipe
 {
 
 extern "C" {
@@ -49,7 +49,7 @@ extern "C" {
 
 HyperPipe::HyperPipe(InstrumentTrack* instrument_track) :
 		Instrument(instrument_track, &hyperpipe_plugin_descriptor),
-		m_model(make_unique<HyperPipeModel>(this))
+		m_model(make_unique<HPModel>(this))
 {
 }
 
@@ -65,11 +65,11 @@ void HyperPipe::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
 {
 	if (nph->totalFramesPlayed() == 0 || nph->m_pluginData == nullptr) {
 		if (nph->m_pluginData != nullptr) {
-			delete static_cast<HyperPipeSynth*>(nph->m_pluginData);
+			delete static_cast<HPSynth*>(nph->m_pluginData);
 		}
-		nph->m_pluginData = new HyperPipeSynth(this, nph, m_model.get());
+		nph->m_pluginData = new HPSynth(this, nph, m_model.get());
 	}
-	HyperPipeSynth *synth = static_cast<HyperPipeSynth*>(nph->m_pluginData);
+	HPSynth *synth = static_cast<HPSynth*>(nph->m_pluginData);
 	const fpp_t frames = nph->framesLeftForCurrentPeriod();
 	const f_cnt_t offset = nph->noteOffset();
 	for (size_t i = 0; i < frames; i++) {
@@ -84,7 +84,7 @@ void HyperPipe::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
 }
 
 void HyperPipe::deleteNotePluginData(NotePlayHandle* nph) {
-	delete static_cast<HyperPipeSynth*>(nph->m_pluginData);
+	delete static_cast<HPSynth*>(nph->m_pluginData);
 }
 
 void HyperPipe::saveSettings (QDomDocument& doc, QDomElement& parent)
@@ -96,7 +96,7 @@ void HyperPipe::loadSettings (const QDomElement& preset)
 }
 
 gui::PluginView* HyperPipe::instantiateView(QWidget* parent) {
-	return new gui::HyperPipeView(this, parent);
+	return new HPView(this, parent);
 }
 
-} // namespace lmms
+} // namespace lmms::hyperpipe
