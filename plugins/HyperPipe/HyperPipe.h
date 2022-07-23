@@ -147,7 +147,6 @@ class HyperPipe;
 
 class HPSynth
 {
-	MM_OPERATORS
 public:
 	HPSynth(HyperPipe* instrument, NotePlayHandle* nph, HPModel* model);
 	virtual ~HPSynth();
@@ -170,7 +169,7 @@ public:
 	void loadSettings(const QDomElement& preset) override;
 	QString nodeName() const override;
 	gui::PluginView* instantiateView(QWidget* parent) override;
-	unique_ptr<HPModel> m_model;
+	HPModel m_model;
 };
 
 } // namespace lmms::hyperpipe

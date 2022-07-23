@@ -32,7 +32,7 @@ namespace lmms::gui::hyperpipe
 HPView::HPView(HyperPipe* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent)
 {
-	auto curNode = instrument->m_model->m_nodes.back();
+	auto curNode = instrument->m_model.m_nodes.back();
 	if (curNode->name() == "noise") {
 		m_curNode = make_unique<HPNoiseView>(
 			this,

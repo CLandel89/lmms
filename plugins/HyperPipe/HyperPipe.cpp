@@ -49,7 +49,7 @@ extern "C" {
 
 HyperPipe::HyperPipe(InstrumentTrack* instrument_track) :
 		Instrument(instrument_track, &hyperpipe_plugin_descriptor),
-		m_model(make_unique<HPModel>(this))
+		m_model(this)
 {
 }
 
@@ -67,7 +67,7 @@ void HyperPipe::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
 		if (nph->m_pluginData != nullptr) {
 			delete static_cast<HPSynth*>(nph->m_pluginData);
 		}
-		nph->m_pluginData = new HPSynth(this, nph, m_model.get());
+		nph->m_pluginData = new HPSynth(this, nph, &m_model);
 	}
 	HPSynth *synth = static_cast<HPSynth*>(nph->m_pluginData);
 	const fpp_t frames = nph->framesLeftForCurrentPeriod();
