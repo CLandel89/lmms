@@ -30,87 +30,122 @@ namespace lmms::gui::hyperpipe
 {
 
 HPView::HPView(HyperPipe* instrument, QWidget* parent) :
-		InstrumentView(instrument, parent)
+		InstrumentView(instrument, parent),
+		m_noise(this, instrument),
+		m_shapes(this, instrument),
+		m_sine(this, instrument),
+		m_instrument(instrument),
+		m_nodeType(this, "node type")
 {
-	auto curNode = instrument->m_model.m_nodes.back();
-	if (curNode->name() == "noise") {
-		m_curNode = make_unique<HPNoiseView>(
-			this,
-			instrument,
-			static_pointer_cast<HPModel::Noise>(curNode)
-		);
+	m_noise.moveRel(0, 25);
+	m_noise.hide();
+	m_shapes.moveRel(0, 25);
+	m_shapes.hide();
+	m_sine.moveRel(0, 25);
+	m_sine.hide();
+	m_nodeTypeModel.addItem(tr("noise"));
+	m_nodeTypeModel.addItem(tr("shapes"));
+	m_nodeTypeModel.addItem(tr("sine"));
+	connect(&m_nodeTypeModel, SIGNAL(dataChanged()), this, SLOT(chNodeType()));
+	m_nodeType.setModel(&m_nodeTypeModel);
+	auto curNode = instrument->m_model.m_nodes[m_model_i];
+	m_nodeTypeModel.setValue(
+		m_nodeTypeModel.findText(QString::fromStdString(curNode->name()))
+	); //=>call to this->chNodeType
+}
+
+void HPView::chNodeType() {
+	string nodeType = m_nodeTypeModel.currentText().toStdString();
+	auto modelNode = m_instrument->m_model.m_nodes[m_model_i];
+	if (modelNode->name() != nodeType) {
+		m_instrument->chNodeType(nodeType, m_model_i);
+		modelNode = m_instrument->m_model.m_nodes[m_model_i];
 	}
-	else if (curNode->name() == "shapes") {
-		m_curNode = make_unique<HPShapesView>(
-			this,
-			instrument,
-			static_pointer_cast<HPModel::Shapes>(curNode)
-		);
+	if (m_curNode != nullptr) {
+		m_curNode->hide();
 	}
-	else if (curNode->name() == "sine") {
-		m_curNode = make_unique<HPSineView>(
-			this,
-			instrument,
-			static_pointer_cast<HPModel::Sine>(curNode)
-		);
+	if (nodeType == "noise") {
+		m_curNode = &m_noise;
+		m_noise.setModel(static_pointer_cast<HPModel::Noise>(modelNode));
+	}
+	else if (nodeType == "shapes") {
+		m_curNode = &m_shapes;
+		m_shapes.setModel(static_pointer_cast<HPModel::Shapes>(modelNode));
+	}
+	else if (nodeType == "sine") {
+		m_curNode = &m_sine;
+		m_sine.setModel(static_pointer_cast<HPModel::Sine>(modelNode));
 	}
 	else {
-		throw "view implementation missing for HyperPipe " + curNode->name();
+		throw invalid_argument("view implementation missing for HyperPipe \"" + modelNode->name() + "\"");
 	}
+	m_curNode->show();
 }
 
 HPNodeView::~HPNodeView()
 {
 }
 
-HPNoiseView::HPNoiseView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Noise> model) :
+void HPNodeView::hide() {
+	for (auto widget : m_widgets) {
+		widget->hide();
+	}
+}
+
+void HPNodeView::moveRel(int x, int y) {
+	for (auto widget : m_widgets) {
+		int origX = widget->pos().x(), origY = widget->pos().y();
+		widget->move(origX + x, origY + y);
+	}
+}
+
+void HPNodeView::show() {
+	for (auto widget : m_widgets) {
+		widget->show();
+	}
+}
+
+HPNoiseView::HPNoiseView(HPView* view, HyperPipe* instrument) :
 		m_spike(view, "spike")
 {
-	m_spike.setModel(model->m_spike.get());
-}
-void HPNoiseView::hide() {
-	m_spike.hide();
-}
-void HPNoiseView::show() {
-	m_spike.show();
+	m_widgets.emplace_back(&m_spike);
 }
 string HPNoiseView::name() {
 	return "noise";
 }
 
-HPSineView::HPSineView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Sine> model) :
+void HPNoiseView::setModel(shared_ptr<HPModel::Noise> model) {
+	m_spike.setModel(model->m_spike.get());
+}
+
+HPSineView::HPSineView(HPView* view, HyperPipe* instrument) :
 		m_sawify(view, "sawify")
 {
-	m_sawify.setModel(model->m_sawify.get());
-}
-void HPSineView::hide() {
-	m_sawify.hide();
-}
-void HPSineView::show() {
-	m_sawify.show();
+	m_widgets.emplace_back(&m_sawify);
 }
 string HPSineView::name() {
 	return "sine";
 }
 
-HPShapesView::HPShapesView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Shapes> model) :
+void HPSineView::setModel(shared_ptr<HPModel::Sine> model) {
+	m_sawify.setModel(model->m_sawify.get());
+}
+
+HPShapesView::HPShapesView(HPView* view, HyperPipe* instrument) :
 		m_shape(view, "shape"),
 		m_jitter(view, "jitter")
 {
-	m_shape.setModel(model->m_shape.get());
-	m_jitter.setModel(model->m_jitter.get());
+	m_widgets.emplace_back(&m_shape);
+	m_widgets.emplace_back(&m_jitter);
 	m_jitter.move(40, 0);
-}
-void HPShapesView::hide() {
-	m_shape.hide();
-	m_jitter.hide();
-}
-void HPShapesView::show() {
-	m_shape.show();
-	m_jitter.show();
 }
 string HPShapesView::name() {
 	return "shapes";
+}
+
+void HPShapesView::setModel(shared_ptr<HPModel::Shapes> model) {
+	m_shape.setModel(model->m_shape.get());
+	m_jitter.setModel(model->m_jitter.get());
 }
 
 HPView::~HPView()

@@ -34,16 +34,14 @@ HPModel::HPModel(Instrument* instrument) {
 }
 
 HPModel::Noise::Noise(Instrument* instrument) :
-		m_spike(make_shared<FloatModel>(12.0f, 0.0f, 20.0f, 0.1f, instrument, tr("spike"))),
-		m_instrument(instrument)
+		m_spike(make_shared<FloatModel>(12.0f, 0.0f, 20.0f, 0.1f, instrument, tr("spike")))
 {
 	m_fmodels.emplace_back(m_spike);
 }
 
-shared_ptr<HPNode> HPModel::Noise::instantiate(shared_ptr<HPModel::Node> self) {
-	return make_shared<HPNoise>(
-		static_pointer_cast<HPModel::Noise>(self),
-		m_instrument
+unique_ptr<HPNode> HPModel::Noise::instantiate(shared_ptr<HPModel::Node> self) {
+	return make_unique<HPNoise>(
+		static_pointer_cast<HPModel::Noise>(self)
 	);
 }
 
@@ -57,8 +55,8 @@ HPModel::Sine::Sine(Instrument* instrument) :
 	m_fmodels.emplace_back(m_sawify);
 }
 
-shared_ptr<HPNode> HPModel::Sine::instantiate(shared_ptr<HPModel::Node> self) {
-	return make_shared<HPSine>(
+unique_ptr<HPNode> HPModel::Sine::instantiate(shared_ptr<HPModel::Node> self) {
+	return make_unique<HPSine>(
 		static_pointer_cast<HPModel::Sine>(self)
 	);
 }
@@ -75,8 +73,8 @@ HPModel::Shapes::Shapes(Instrument* instrument) :
 	m_fmodels.emplace_back(m_jitter);
 }
 
-shared_ptr<HPNode> HPModel::Shapes::instantiate(shared_ptr<HPModel::Node> self) {
-	return make_shared<HPShapes>(
+unique_ptr<HPNode> HPModel::Shapes::instantiate(shared_ptr<HPModel::Node> self) {
+	return make_unique<HPShapes>(
 		static_pointer_cast<HPModel::Shapes>(self)
 	);
 }

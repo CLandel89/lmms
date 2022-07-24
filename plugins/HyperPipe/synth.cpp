@@ -52,9 +52,10 @@ float HPOsc::processFrame(float freq, float srate) {
 	return shape(m_ph);
 }
 
-HPSine::HPSine(shared_ptr<HPModel::Sine> model) :
-		m_sawify(model->m_sawify)
-{
+HPSine::HPSine(shared_ptr<HPModel::Sine> model) {
+	if (model != nullptr) {
+		m_sawify = model->m_sawify;
+	}
 }
 
 HPSine::~HPSine()
@@ -62,17 +63,21 @@ HPSine::~HPSine()
 }
 
 float HPSine::shape(float ph) {
+	float sawify = m_sawify != nullptr ? m_sawify->value() : m_sawify_fb;
 	float s = sinf(ph * F_2PI);
 	float saw = ph; //simplified and reversed
-	saw = 1.0f - m_sawify->value() * saw; //ready for multiplication with s
+	saw = 1.0f - sawify * saw; //ready for multiplication with s
 	return saw * s;
 }
 
-HPNoise::HPNoise(shared_ptr<HPModel::Noise> model, Instrument* instrument) :
+HPNoise::HPNoise(shared_ptr<HPModel::Noise> model) :
 		m_spike(model->m_spike),
-		m_osc(make_shared<HPModel::Sine>(instrument))
+		m_osc(nullptr)
 {
-	m_osc.m_sawify->setValue(1.0f);
+	if (model != nullptr) {
+		m_spike = model->m_spike;
+	}
+	m_osc.m_sawify_fb = 1.0f;
 }
 
 HPNoise::~HPNoise()
@@ -80,9 +85,10 @@ HPNoise::~HPNoise()
 }
 
 float HPNoise::processFrame(float freq, float srate) {
+	float spike = m_spike != nullptr ? m_spike->value() : m_spike_fb;
 	float osc = m_osc.processFrame(freq, srate);
 	osc = (osc + 1.0f) / 2.0f; //0.0...1.0
-	osc = powf(osc, m_spike->value());
+	osc = powf(osc, spike);
 	float r = 1.0f - fastRandf(2.0f);
 	return osc * r;
 }

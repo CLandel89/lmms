@@ -99,28 +99,30 @@ inline float tri2sqr(float ph, float morph)
 namespace lmms::hyperpipe
 {
 
-HPShapes::HPShapes(shared_ptr<HPModel::Shapes> model) :
-		m_shape(model->m_shape),
-		m_jitter(model->m_jitter)
-{
+HPShapes::HPShapes(shared_ptr<HPModel::Shapes> model) {
+	if (model != nullptr) {
+		m_shape = model->m_shape;
+		m_jitter = model->m_jitter;
+	}
 }
 
-HPShapes::~HPShapes()
-{
+HPShapes::~HPShapes() {
 }
 
 float HPShapes::shape(float ph)
 {
-	float shape = m_shape->value() + fastRandf(m_jitter->value());
-	while (shape < 0.0f) { shape += 3.0f; }
-	while (shape >= 3.0f) { shape -= 3.0f; }
-	float morph = fraction(shape);
+	float shape = m_shape != nullptr ? m_shape->value() : m_shape_fb;
+	float jitter = m_jitter != nullptr ? m_jitter->value() : m_jitter_fb;
+	float finalShape = shape + fastRandf(jitter);
+	while (finalShape < 0.0f) { finalShape += 3.0f; }
+	while (finalShape >= 3.0f) { finalShape -= 3.0f; }
+	float morph = fraction(finalShape);
 	// amp: the shapes with vertical edges sound too loud
-	if (shape < 1.0f) {
+	if (finalShape < 1.0f) {
 		float amp = 0.4f + 0.6f * morph;
 		return amp * saw2tri(ph, morph);
 	}
-	if (shape < 2.0f) {
+	if (finalShape < 2.0f) {
 		float amp = 1.0f - 0.7f * morph;
 		return amp * tri2sqr(ph, morph);
 	}

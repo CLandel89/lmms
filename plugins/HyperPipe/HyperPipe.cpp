@@ -30,8 +30,7 @@ namespace lmms::hyperpipe
 {
 
 extern "C" {
-	Plugin::Descriptor PLUGIN_EXPORT hyperpipe_plugin_descriptor =
-	{
+	Plugin::Descriptor PLUGIN_EXPORT hyperpipe_plugin_descriptor = {
 		LMMS_STRINGIFY(PLUGIN_NAME),
 		"HyperPipe",
 		QT_TRANSLATE_NOOP("PluginBrowser", "synth with arbitrary possibilities"),
@@ -53,8 +52,7 @@ HyperPipe::HyperPipe(InstrumentTrack* instrument_track) :
 {
 }
 
-HyperPipe::~HyperPipe()
-{
+HyperPipe::~HyperPipe() {
 }
 
 QString HyperPipe::nodeName() const {
@@ -97,6 +95,25 @@ void HyperPipe::loadSettings (const QDomElement& preset)
 
 gui::PluginView* HyperPipe::instantiateView(QWidget* parent) {
 	return new HPView(this, parent);
+}
+
+void HyperPipe::chNodeType(string nodeType, size_t model_i)
+{
+	if (nodeType == m_model.m_nodes[model_i]->name()) {
+		return;
+	}
+	if (nodeType == "noise") {
+		m_model.m_nodes[model_i] = make_shared<HPModel::Noise>(this);
+	}
+	else if (nodeType == "shapes") {
+		m_model.m_nodes[model_i] = make_shared<HPModel::Shapes>(this);
+	}
+	else if (nodeType == "sine") {
+		m_model.m_nodes[model_i] = make_shared<HPModel::Sine>(this);
+	}
+	else {
+		throw invalid_argument("model implementation missing for HyperPipe \"" + nodeType + "\"");
+	}
 }
 
 } // namespace lmms::hyperpipe

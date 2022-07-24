@@ -35,6 +35,7 @@
 #include "NotePlayHandle.h"
 #include "plugin_export.h"
 
+#include <stdexcept>
 #include <vector>
 
 using namespace std;
@@ -65,27 +66,27 @@ public:
 		vector<shared_ptr<ComboBoxModel>> m_cbmodels;
 		vector<shared_ptr<FloatModel>> m_fmodels;
 		vector<shared_ptr<IntModel>> m_imodels;
-		virtual shared_ptr<HPNode> instantiate(shared_ptr<Node> self) = 0;
+		/*! Calls the synth node constructor that corresponds to the derived model struct. */
+		virtual unique_ptr<HPNode> instantiate(shared_ptr<Node> self) = 0;
 		virtual string name() = 0;
 	};
 	struct Noise : public Node {
 		Noise(Instrument* instrument);
 		shared_ptr<FloatModel> m_spike;
-		shared_ptr<HPNode> instantiate(shared_ptr<Node> self);
+		unique_ptr<HPNode> instantiate(shared_ptr<Node> self);
 		string name();
-		Instrument* m_instrument;
 	};
 	struct Sine : public Node {
 		Sine(Instrument* instrument);
 		shared_ptr<FloatModel> m_sawify;
-		shared_ptr<HPNode> instantiate(shared_ptr<Node> self);
+		unique_ptr<HPNode> instantiate(shared_ptr<Node> self);
 		string name();
 	};
 	struct Shapes : public Node {
 		Shapes(Instrument* instrument);
 		shared_ptr<FloatModel> m_shape;
 		shared_ptr<FloatModel> m_jitter;
-		shared_ptr<HPNode> instantiate(shared_ptr<Node> self);
+		unique_ptr<HPNode> instantiate(shared_ptr<Node> self);
 		string name();
 	};
 	vector<shared_ptr<Node>> m_nodes;
@@ -116,7 +117,8 @@ class HPSine : public HPOsc
 public:
 	HPSine(shared_ptr<HPModel::Sine> model);
 	virtual ~HPSine();
-	shared_ptr<FloatModel> m_sawify;
+	shared_ptr<FloatModel> m_sawify = nullptr;
+	float m_sawify_fb = 0.0f; //fallback if no model
 private:
 	float shape(float ph);
 };
@@ -126,8 +128,10 @@ class HPShapes : public HPOsc
 public:
 	HPShapes(shared_ptr<HPModel::Shapes> model);
 	virtual ~HPShapes();
-	shared_ptr<FloatModel> m_shape;
-	shared_ptr<FloatModel> m_jitter;
+	shared_ptr<FloatModel> m_shape = nullptr;
+	float m_shape_fb = 0.0f;
+	shared_ptr<FloatModel> m_jitter = nullptr;
+	float m_jitter_fb = 0.0f;
 private:
 	float shape(float ph);
 };
@@ -135,10 +139,11 @@ private:
 class HPNoise : public HPNode
 {
 public:
-	HPNoise(shared_ptr<HPModel::Noise> model, Instrument* instrument);
+	HPNoise(shared_ptr<HPModel::Noise> model);
 	virtual ~HPNoise();
 	float processFrame(float freq, float srate);
-	shared_ptr<FloatModel> m_spike;
+	shared_ptr<FloatModel> m_spike = nullptr;
+	float m_spike_fb = 1.0f;
 private:
 	HPSine m_osc;
 };
@@ -154,7 +159,7 @@ public:
 private:
 	HyperPipe *m_instrument;
 	NotePlayHandle *m_nph;
-	shared_ptr<HPNode> m_lastNode;
+	unique_ptr<HPNode> m_lastNode;
 };
 
 class HyperPipe : public Instrument
@@ -163,6 +168,7 @@ class HyperPipe : public Instrument
 public:
 	HyperPipe(InstrumentTrack* track);
 	virtual ~HyperPipe();
+	void chNodeType(string nodeType, size_t model_i);
 	void playNote(NotePlayHandle* nph, sampleFrame* working_buffer) override;
 	void deleteNotePluginData(NotePlayHandle* nph) override;
 	void saveSettings(QDomDocument& doc, QDomElement& parent) override;
@@ -176,7 +182,45 @@ public:
 
 namespace lmms::gui::hyperpipe {
 
-class HPNodeView;
+class HPView;
+
+class HPNodeView {
+public:
+	virtual ~HPNodeView();
+	virtual string name() = 0;
+	void hide();
+	void moveRel(int x, int y);
+	void show();
+	vector<QWidget*> m_widgets;
+};
+
+class HPNoiseView : public HPNodeView {
+public:
+	HPNoiseView(HPView* view, HyperPipe* instrument);
+	string name();
+	void setModel(shared_ptr<HPModel::Noise> model);
+private:
+	Knob m_spike;
+};
+
+class HPSineView : public HPNodeView {
+public:
+	HPSineView(HPView* view, HyperPipe* instrument);
+	string name();
+	void setModel(shared_ptr<HPModel::Sine> model);
+private:
+	Knob m_sawify;
+};
+
+class HPShapesView : public HPNodeView {
+public:
+	HPShapesView(HPView* view, HyperPipe* instrument);
+	string name();
+	void setModel(shared_ptr<HPModel::Shapes> model);
+private:
+	Knob m_shape;
+	Knob m_jitter;
+};
 
 class HPView : public InstrumentView //InstrumentViewFixedSize
 {
@@ -185,47 +229,16 @@ public:
 	HPView(HyperPipe* instrument, QWidget* parent);
 	virtual ~HPView();
 private:
-	ComboBox m_ntype;
-	unique_ptr<HPNodeView> m_curNode;
-};
-
-class HPNodeView {
-public:
-	virtual ~HPNodeView();
-	virtual void hide() = 0;
-	virtual void show() = 0;
-	virtual string name() = 0;
-};
-
-class HPNoiseView : public HPNodeView {
-public:
-	HPNoiseView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Noise> model);
-	void hide();
-	void show();
-	string name();
-private:
-	Knob m_spike;
-};
-
-class HPSineView : public HPNodeView {
-public:
-	HPSineView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Sine> model);
-	void hide();
-	void show();
-	string name();
-private:
-	Knob m_sawify;
-};
-
-class HPShapesView : public HPNodeView {
-public:
-	HPShapesView(HPView* view, HyperPipe* instrument, shared_ptr<HPModel::Shapes> model);
-	void hide();
-	void show();
-	string name();
-private:
-	Knob m_shape;
-	Knob m_jitter;
+	HPNodeView *m_curNode = nullptr;
+	HPNoiseView m_noise;
+	HPShapesView m_shapes;
+	HPSineView m_sine;
+	HyperPipe *m_instrument;
+	size_t m_model_i = 0;
+	ComboBox m_nodeType;
+	ComboBoxModel m_nodeTypeModel;
+private slots:
+	void chNodeType();
 };
 
 } // namespace lmms::gui::hyperpipe
