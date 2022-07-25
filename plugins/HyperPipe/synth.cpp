@@ -29,23 +29,6 @@
 namespace lmms::hyperpipe
 {
 
-HPNode::HPNode()
-{
-}
-
-HPNode::~HPNode()
-{
-}
-
-HPOsc::HPOsc() :
-		HPNode()
-{
-}
-
-HPOsc::~HPOsc()
-{
-}
-
 float HPOsc::processFrame(float freq, float srate) {
 	m_ph += freq / srate;
 	m_ph = fraction(m_ph);
@@ -56,10 +39,6 @@ HPSine::HPSine(shared_ptr<HPModel::Sine> model) {
 	if (model != nullptr) {
 		m_sawify = model->m_sawify;
 	}
-}
-
-HPSine::~HPSine()
-{
 }
 
 float HPSine::shape(float ph) {
@@ -80,10 +59,6 @@ HPNoise::HPNoise(shared_ptr<HPModel::Noise> model) :
 	m_osc.m_sawify_fb = 1.0f;
 }
 
-HPNoise::~HPNoise()
-{
-}
-
 float HPNoise::processFrame(float freq, float srate) {
 	float spike = m_spike != nullptr ? m_spike->value() : m_spike_fb;
 	float osc = m_osc.processFrame(freq, srate);
@@ -97,10 +72,6 @@ HPSynth::HPSynth(HyperPipe* instrument, NotePlayHandle* nph, HPModel* model) :
 		m_instrument(instrument),
 		m_nph(nph),
 		m_lastNode(model->m_nodes.back()->instantiate(model->m_nodes.back()))
-{
-}
-
-HPSynth::~HPSynth()
 {
 }
 

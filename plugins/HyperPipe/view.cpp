@@ -82,10 +82,6 @@ void HPView::chNodeType() {
 	m_curNode->show();
 }
 
-HPNodeView::~HPNodeView()
-{
-}
-
 void HPNodeView::hide() {
 	for (auto widget : m_widgets) {
 		widget->hide();
@@ -146,10 +142,6 @@ string HPShapesView::name() {
 void HPShapesView::setModel(shared_ptr<HPModel::Shapes> model) {
 	m_shape.setModel(model->m_shape.get());
 	m_jitter.setModel(model->m_jitter.get());
-}
-
-HPView::~HPView()
-{
 }
 
 } // namespace lmms::gui::hyperpipe

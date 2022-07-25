@@ -106,9 +106,6 @@ HPShapes::HPShapes(shared_ptr<HPModel::Shapes> model) {
 	}
 }
 
-HPShapes::~HPShapes() {
-}
-
 float HPShapes::shape(float ph)
 {
 	float shape = m_shape != nullptr ? m_shape->value() : m_shape_fb;

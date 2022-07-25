@@ -63,6 +63,7 @@ class HPModel : QObject
 public:
 	HPModel(Instrument* instrument);
 	struct Node {
+		virtual ~Node() = default;
 		vector<shared_ptr<ComboBoxModel>> m_cbmodels;
 		vector<shared_ptr<FloatModel>> m_fmodels;
 		vector<shared_ptr<IntModel>> m_imodels;
@@ -96,16 +97,14 @@ class HPNode : QObject
 {
 	Q_OBJECT
 public:
-	HPNode();
-	virtual ~HPNode();
+	virtual ~HPNode() = default;
 	virtual float processFrame(float freq, float srate) = 0;
 };
 
 class HPOsc : public HPNode
 {
 public:
-	HPOsc();
-	virtual ~HPOsc();
+	virtual ~HPOsc() = default;
 	float processFrame(float freq, float srate);
 private:
 	virtual float shape(float ph) = 0;
@@ -116,7 +115,6 @@ class HPSine : public HPOsc
 {
 public:
 	HPSine(shared_ptr<HPModel::Sine> model);
-	virtual ~HPSine();
 	shared_ptr<FloatModel> m_sawify = nullptr;
 	float m_sawify_fb = 0.0f; //fallback if no model
 private:
@@ -127,7 +125,6 @@ class HPShapes : public HPOsc
 {
 public:
 	HPShapes(shared_ptr<HPModel::Shapes> model);
-	virtual ~HPShapes();
 	shared_ptr<FloatModel> m_shape = nullptr;
 	float m_shape_fb = 0.0f;
 	shared_ptr<FloatModel> m_jitter = nullptr;
@@ -140,10 +137,9 @@ class HPNoise : public HPNode
 {
 public:
 	HPNoise(shared_ptr<HPModel::Noise> model);
-	virtual ~HPNoise();
 	float processFrame(float freq, float srate);
 	shared_ptr<FloatModel> m_spike = nullptr;
-	float m_spike_fb = 1.0f;
+	float m_spike_fb = 4.0f;
 private:
 	HPSine m_osc;
 };
@@ -154,7 +150,6 @@ class HPSynth
 {
 public:
 	HPSynth(HyperPipe* instrument, NotePlayHandle* nph, HPModel* model);
-	virtual ~HPSynth();
 	array<float,2> processFrame(float freq, float srate);
 private:
 	HyperPipe *m_instrument;
@@ -167,7 +162,6 @@ class HyperPipe : public Instrument
 	Q_OBJECT
 public:
 	HyperPipe(InstrumentTrack* track);
-	virtual ~HyperPipe();
 	void chNodeType(string nodeType, size_t model_i);
 	void playNote(NotePlayHandle* nph, sampleFrame* working_buffer) override;
 	void deleteNotePluginData(NotePlayHandle* nph) override;
@@ -186,7 +180,7 @@ class HPView;
 
 class HPNodeView {
 public:
-	virtual ~HPNodeView();
+	virtual ~HPNodeView() = default;
 	virtual string name() = 0;
 	void hide();
 	void moveRel(int x, int y);
@@ -227,7 +221,6 @@ class HPView : public InstrumentView //InstrumentViewFixedSize
 	Q_OBJECT
 public:
 	HPView(HyperPipe* instrument, QWidget* parent);
-	virtual ~HPView();
 private:
 	HPNodeView *m_curNode = nullptr;
 	HPNoiseView m_noise;

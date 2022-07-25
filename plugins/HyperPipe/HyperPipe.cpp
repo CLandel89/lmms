@@ -52,9 +52,6 @@ HyperPipe::HyperPipe(InstrumentTrack* instrument_track) :
 {
 }
 
-HyperPipe::~HyperPipe() {
-}
-
 QString HyperPipe::nodeName() const {
 	return hyperpipe_plugin_descriptor.name;
 }
@@ -85,11 +82,11 @@ void HyperPipe::deleteNotePluginData(NotePlayHandle* nph) {
 	delete static_cast<HPSynth*>(nph->m_pluginData);
 }
 
-void HyperPipe::saveSettings (QDomDocument& doc, QDomElement& parent)
+void HyperPipe::saveSettings(QDomDocument& doc, QDomElement& parent)
 {
 }
 
-void HyperPipe::loadSettings (const QDomElement& preset)
+void HyperPipe::loadSettings(const QDomElement& preset)
 {
 }
 

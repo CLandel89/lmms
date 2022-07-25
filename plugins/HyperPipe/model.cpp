@@ -34,7 +34,7 @@ HPModel::HPModel(Instrument* instrument) {
 }
 
 HPModel::Noise::Noise(Instrument* instrument) :
-		m_spike(make_shared<FloatModel>(12.0f, 0.0f, 20.0f, 0.1f, instrument, tr("spike")))
+		m_spike(make_shared<FloatModel>(4.0f, 0.0f, 20.0f, 0.1f, instrument, tr("spike")))
 {
 	m_fmodels.emplace_back(m_spike);
 }
