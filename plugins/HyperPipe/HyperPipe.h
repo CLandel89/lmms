@@ -64,9 +64,6 @@ public:
 	HPModel(Instrument* instrument);
 	struct Node {
 		virtual ~Node() = default;
-		vector<shared_ptr<ComboBoxModel>> m_cbmodels;
-		vector<shared_ptr<FloatModel>> m_fmodels;
-		vector<shared_ptr<IntModel>> m_imodels;
 		/*! Calls the synth node constructor that corresponds to the derived model struct. */
 		virtual unique_ptr<HPNode> instantiate(shared_ptr<Node> self) = 0;
 		virtual string name() = 0;

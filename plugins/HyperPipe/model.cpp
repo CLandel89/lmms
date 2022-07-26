@@ -36,7 +36,6 @@ HPModel::HPModel(Instrument* instrument) {
 HPModel::Noise::Noise(Instrument* instrument) :
 		m_spike(make_shared<FloatModel>(4.0f, 0.0f, 20.0f, 0.1f, instrument, tr("spike")))
 {
-	m_fmodels.emplace_back(m_spike);
 }
 
 unique_ptr<HPNode> HPModel::Noise::instantiate(shared_ptr<HPModel::Node> self) {
@@ -52,7 +51,6 @@ string HPModel::Noise::name() {
 HPModel::Sine::Sine(Instrument* instrument) :
 		m_sawify(make_shared<FloatModel>(0.0f, 0.0f, 1.0f, 0.01f, instrument, tr("sawify")))
 {
-	m_fmodels.emplace_back(m_sawify);
 }
 
 unique_ptr<HPNode> HPModel::Sine::instantiate(shared_ptr<HPModel::Node> self) {
@@ -69,8 +67,6 @@ HPModel::Shapes::Shapes(Instrument* instrument) :
 		m_shape(make_shared<FloatModel>(0.0f, -3.0f, 3.0f, 0.01f, instrument, tr("shape"))),
 		m_jitter(make_shared<FloatModel>(0.0f, -3.0f, 3.0f, 0.01f, instrument, tr("jitter")))
 {
-	m_fmodels.emplace_back(m_shape);
-	m_fmodels.emplace_back(m_jitter);
 }
 
 unique_ptr<HPNode> HPModel::Shapes::instantiate(shared_ptr<HPModel::Node> self) {

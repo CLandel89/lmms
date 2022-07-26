@@ -37,12 +37,15 @@ HPView::HPView(HyperPipe* instrument, QWidget* parent) :
 		m_instrument(instrument),
 		m_nodeType(this, "node type")
 {
+	// node view
 	m_noise.moveRel(0, 25);
 	m_noise.hide();
 	m_shapes.moveRel(0, 25);
 	m_shapes.hide();
 	m_sine.moveRel(0, 25);
 	m_sine.hide();
+
+	// node type combo box
 	m_nodeTypeModel.addItem(tr("noise"));
 	m_nodeTypeModel.addItem(tr("shapes"));
 	m_nodeTypeModel.addItem(tr("sine"));
