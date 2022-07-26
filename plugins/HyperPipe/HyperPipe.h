@@ -25,6 +25,7 @@
  */
 
 #include "AudioEngine.h"
+#include "PixmapButton.h"
 #include "ComboBox.h"
 #include "Engine.h"
 #include "Instrument.h"
@@ -88,6 +89,10 @@ public:
 		string name();
 	};
 	vector<shared_ptr<Node>> m_nodes;
+	void prepend(shared_ptr<Node> node, size_t model_i);
+	void append(shared_ptr<Node> node, size_t model_i);
+	void remove(size_t model_i);
+	size_t size();
 };
 
 class HPNode : QObject
@@ -219,6 +224,7 @@ class HPView : public InstrumentView //InstrumentViewFixedSize
 public:
 	HPView(HPInstrument* instrument, QWidget* parent);
 private:
+	void updateNodeView();
 	HPNodeView *m_curNode = nullptr;
 	HPNoiseView m_noise;
 	HPShapesView m_shapes;
@@ -227,8 +233,22 @@ private:
 	size_t m_model_i = 0;
 	ComboBox m_nodeType;
 	ComboBoxModel m_nodeTypeModel;
+	PixmapButton m_prev;
+	PixmapButton m_next;
+	PixmapButton m_moveUp;
+	PixmapButton m_prepend;
+	PixmapButton m_delete;
+	PixmapButton m_append;
+	PixmapButton m_moveDown;
 private slots:
-	void chNodeType();
+	void s_chNodeType();
+	void s_prev();
+	void s_next();
+	void s_moveUp();
+	void s_prepend();
+	void s_delete();
+	void s_append();
+	void s_moveDown();
 };
 
 } // namespace lmms::gui::hyperpipe

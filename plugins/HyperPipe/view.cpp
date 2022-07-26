@@ -35,34 +35,84 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		m_shapes(this, instrument),
 		m_sine(this, instrument),
 		m_instrument(instrument),
-		m_nodeType(this, "node type")
+		m_nodeType(this, "node type"),
+		m_prev(this),
+		m_next(this),
+		m_moveUp(this),
+		m_prepend(this),
+		m_delete(this),
+		m_append(this),
+		m_moveDown(this)
 {
 	// node view
-	m_noise.moveRel(0, 25);
+	m_noise.moveRel(0, 60);
 	m_noise.hide();
-	m_shapes.moveRel(0, 25);
+	m_shapes.moveRel(0, 60);
 	m_shapes.hide();
-	m_sine.moveRel(0, 25);
+	m_sine.moveRel(0, 60);
 	m_sine.hide();
 
 	// node type combo box
+	m_nodeType.move(0, 30);
 	m_nodeTypeModel.addItem(tr("noise"));
 	m_nodeTypeModel.addItem(tr("shapes"));
 	m_nodeTypeModel.addItem(tr("sine"));
-	connect(&m_nodeTypeModel, SIGNAL(dataChanged()), this, SLOT(chNodeType()));
+	connect(&m_nodeTypeModel, SIGNAL(dataChanged()), this, SLOT(s_chNodeType()));
 	m_nodeType.setModel(&m_nodeTypeModel);
 	auto curNode = instrument->m_model.m_nodes[m_model_i];
 	m_nodeTypeModel.setValue(
 		m_nodeTypeModel.findText(QString::fromStdString(curNode->name()))
-	); //=>call to this->chNodeType
+	); //=>call to this->s_chNodeType
+
+	// node move/create/delete buttons
+	m_prev.setActiveGraphic(PLUGIN_NAME::getIconPixmap("prev"));
+	m_prev.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("prev"));
+	m_prev.move(10, 0);
+	connect(&m_prev, SIGNAL(clicked()), this, SLOT(s_prev()));
+	m_next.setActiveGraphic(PLUGIN_NAME::getIconPixmap("next"));
+	m_next.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("next"));
+	m_next.move(40, 0);
+	connect(&m_next, SIGNAL(clicked()), this, SLOT(s_next()));
+	m_moveUp.setActiveGraphic(PLUGIN_NAME::getIconPixmap("moveUp"));
+	m_moveUp.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("moveUp"));
+	m_moveUp.move(80, 0);
+	connect(&m_moveUp, SIGNAL(clicked()), this, SLOT(s_moveUp()));
+	m_prepend.setActiveGraphic(PLUGIN_NAME::getIconPixmap("prepend"));
+	m_prepend.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("prepend"));
+	m_prepend.move(110, 0);
+	connect(&m_prepend, SIGNAL(clicked()), this, SLOT(s_prepend()));
+	m_delete.setActiveGraphic(PLUGIN_NAME::getIconPixmap("delete"));
+	m_delete.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("delete"));
+	m_delete.move(140, 0);
+	connect(&m_delete, SIGNAL(clicked()), this, SLOT(s_delete()));
+	m_append.setActiveGraphic(PLUGIN_NAME::getIconPixmap("append"));
+	m_append.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("append"));
+	m_append.move(170, 0);
+	connect(&m_append, SIGNAL(clicked()), this, SLOT(s_append()));
+	m_moveDown.setActiveGraphic(PLUGIN_NAME::getIconPixmap("moveDown"));
+	m_moveDown.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("moveDown"));
+	m_moveDown.move(200, 0);
+	connect(&m_moveDown, SIGNAL(clicked()), this, SLOT(s_moveDown()));
 }
 
-void HPView::chNodeType() {
+void HPView::s_chNodeType() {
 	string nodeType = m_nodeTypeModel.currentText().toStdString();
 	auto modelNode = m_instrument->m_model.m_nodes[m_model_i];
 	if (modelNode->name() != nodeType) {
 		m_instrument->chNodeType(nodeType, m_model_i);
 		modelNode = m_instrument->m_model.m_nodes[m_model_i];
+	}
+	updateNodeView();
+}
+
+void HPView::updateNodeView() {
+	auto modelNode = m_instrument->m_model.m_nodes[m_model_i];
+	string nodeType = modelNode->name();
+	if (nodeType != m_nodeTypeModel.currentText().toStdString()) {
+		//combo box needs update
+		m_nodeTypeModel.setValue(
+			m_nodeTypeModel.findText(QString::fromStdString(nodeType))
+		);
 	}
 	if (m_curNode != nullptr) {
 		m_curNode->hide();
@@ -83,6 +133,54 @@ void HPView::chNodeType() {
 		throw invalid_argument("view implementation missing for HyperPipe \"" + modelNode->name() + "\"");
 	}
 	m_curNode->show();
+}
+
+void HPView::s_prev() {
+	if (m_model_i <= 0) { return; }
+	m_model_i--;
+	updateNodeView();
+}
+
+void HPView::s_next() {
+	if (m_model_i >= m_instrument->m_model.size() - 1) { return; }
+	m_model_i++;
+	updateNodeView();
+}
+
+void HPView::s_moveUp() {
+	if (m_model_i <= 0) { return; }
+	auto &nodes = m_instrument->m_model.m_nodes;
+	swap(nodes[m_model_i], nodes[m_model_i - 1]);
+	m_model_i--;
+	updateNodeView();
+}
+
+void HPView::s_prepend() {
+	auto mnode = make_shared<HPModel::Shapes>(m_instrument);
+	m_instrument->m_model.prepend(mnode, m_model_i);
+	updateNodeView();
+}
+
+void HPView::s_delete() {
+	if (m_instrument->m_model.size() <= 1) { return; }
+	m_instrument->m_model.remove(m_model_i);
+	if (m_model_i >= m_instrument->m_model.size()) { m_model_i--; }
+	updateNodeView();
+}
+
+void HPView::s_append() {
+	auto mnode = make_shared<HPModel::Shapes>(m_instrument);
+	m_instrument->m_model.append(mnode, m_model_i);
+	m_model_i++;
+	updateNodeView();
+}
+
+void HPView::s_moveDown() {
+	if (m_model_i >= m_instrument->m_model.size() - 1) { return; }
+	auto &nodes = m_instrument->m_model.m_nodes;
+	swap(nodes[m_model_i], nodes[m_model_i + 1]);
+	m_model_i++;
+	updateNodeView();
 }
 
 void HPNodeView::hide() {

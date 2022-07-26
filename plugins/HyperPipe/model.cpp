@@ -32,6 +32,44 @@ namespace lmms::hyperpipe
 HPModel::HPModel(Instrument* instrument) {
 	m_nodes.emplace_back(make_shared<HPModel::Shapes>(instrument));
 }
+void HPModel::prepend(shared_ptr<Node> node, size_t model_i) {
+	vector<shared_ptr<Node>> recreation;
+	size_t i = 0;
+	for (auto mnode : m_nodes) {
+		if (i == model_i) {
+			recreation.emplace_back(node);
+		}
+		recreation.emplace_back(mnode);
+		i++;
+	}
+	m_nodes = recreation;
+}
+void HPModel::append(shared_ptr<Node> node, size_t model_i) {
+	vector<shared_ptr<Node>> recreation;
+	size_t i = 0;
+	for (auto mnode : m_nodes) {
+		recreation.emplace_back(mnode);
+		if (i == model_i) {
+			recreation.emplace_back(node);
+		}
+		i++;
+	}
+	m_nodes = recreation;
+}
+void HPModel::remove(size_t model_i) {
+	vector<shared_ptr<Node>> recreation;
+	for (size_t i = 0; i < size(); i++) {
+		auto mnode = m_nodes[i];
+		if (i == model_i) {
+			continue;
+		}
+		recreation.emplace_back(mnode);
+	}
+	m_nodes = recreation;
+}
+size_t HPModel::size() {
+	return m_nodes.size();
+}
 
 HPModel::Noise::Noise(Instrument* instrument) :
 		m_spike(make_shared<FloatModel>(4.0f, 0.0f, 20.0f, 0.1f, instrument, tr("spike")))
