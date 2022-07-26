@@ -29,7 +29,7 @@
 namespace lmms::gui::hyperpipe
 {
 
-HPView::HPView(HyperPipe* instrument, QWidget* parent) :
+HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent),
 		m_noise(this, instrument),
 		m_shapes(this, instrument),
@@ -104,7 +104,7 @@ void HPNodeView::show() {
 	}
 }
 
-HPNoiseView::HPNoiseView(HPView* view, HyperPipe* instrument) :
+HPNoiseView::HPNoiseView(HPView* view, HPInstrument* instrument) :
 		m_spike(view, "spike")
 {
 	m_widgets.emplace_back(&m_spike);
@@ -117,7 +117,7 @@ void HPNoiseView::setModel(shared_ptr<HPModel::Noise> model) {
 	m_spike.setModel(model->m_spike.get());
 }
 
-HPSineView::HPSineView(HPView* view, HyperPipe* instrument) :
+HPSineView::HPSineView(HPView* view, HPInstrument* instrument) :
 		m_sawify(view, "sawify")
 {
 	m_widgets.emplace_back(&m_sawify);
@@ -130,7 +130,7 @@ void HPSineView::setModel(shared_ptr<HPModel::Sine> model) {
 	m_sawify.setModel(model->m_sawify.get());
 }
 
-HPShapesView::HPShapesView(HPView* view, HyperPipe* instrument) :
+HPShapesView::HPShapesView(HPView* view, HPInstrument* instrument) :
 		m_shape(view, "shape"),
 		m_jitter(view, "jitter")
 {

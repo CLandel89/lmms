@@ -68,7 +68,7 @@ float HPNoise::processFrame(float freq, float srate) {
 	return osc * r;
 }
 
-HPSynth::HPSynth(HyperPipe* instrument, NotePlayHandle* nph, HPModel* model) :
+HPSynth::HPSynth(HPInstrument* instrument, NotePlayHandle* nph, HPModel* model) :
 		m_instrument(instrument),
 		m_nph(nph),
 		m_lastNode(model->m_nodes.back()->instantiate(model->m_nodes.back()))

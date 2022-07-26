@@ -141,24 +141,24 @@ private:
 	HPSine m_osc;
 };
 
-class HyperPipe;
+class HPInstrument;
 
 class HPSynth
 {
 public:
-	HPSynth(HyperPipe* instrument, NotePlayHandle* nph, HPModel* model);
+	HPSynth(HPInstrument* instrument, NotePlayHandle* nph, HPModel* model);
 	array<float,2> processFrame(float freq, float srate);
 private:
-	HyperPipe *m_instrument;
+	HPInstrument *m_instrument;
 	NotePlayHandle *m_nph;
 	unique_ptr<HPNode> m_lastNode;
 };
 
-class HyperPipe : public Instrument
+class HPInstrument : public Instrument
 {
 	Q_OBJECT
 public:
-	HyperPipe(InstrumentTrack* track);
+	HPInstrument(InstrumentTrack* track);
 	void chNodeType(string nodeType, size_t model_i);
 	void playNote(NotePlayHandle* nph, sampleFrame* working_buffer) override;
 	void deleteNotePluginData(NotePlayHandle* nph) override;
@@ -187,7 +187,7 @@ public:
 
 class HPNoiseView : public HPNodeView {
 public:
-	HPNoiseView(HPView* view, HyperPipe* instrument);
+	HPNoiseView(HPView* view, HPInstrument* instrument);
 	string name();
 	void setModel(shared_ptr<HPModel::Noise> model);
 private:
@@ -196,7 +196,7 @@ private:
 
 class HPSineView : public HPNodeView {
 public:
-	HPSineView(HPView* view, HyperPipe* instrument);
+	HPSineView(HPView* view, HPInstrument* instrument);
 	string name();
 	void setModel(shared_ptr<HPModel::Sine> model);
 private:
@@ -205,7 +205,7 @@ private:
 
 class HPShapesView : public HPNodeView {
 public:
-	HPShapesView(HPView* view, HyperPipe* instrument);
+	HPShapesView(HPView* view, HPInstrument* instrument);
 	string name();
 	void setModel(shared_ptr<HPModel::Shapes> model);
 private:
@@ -217,13 +217,13 @@ class HPView : public InstrumentView //InstrumentViewFixedSize
 {
 	Q_OBJECT
 public:
-	HPView(HyperPipe* instrument, QWidget* parent);
+	HPView(HPInstrument* instrument, QWidget* parent);
 private:
 	HPNodeView *m_curNode = nullptr;
 	HPNoiseView m_noise;
 	HPShapesView m_shapes;
 	HPSineView m_sine;
-	HyperPipe *m_instrument;
+	HPInstrument *m_instrument;
 	size_t m_model_i = 0;
 	ComboBox m_nodeType;
 	ComboBoxModel m_nodeTypeModel;

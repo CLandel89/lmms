@@ -1,5 +1,5 @@
 /*
- * HyperPipe.cpp - implementation of class HyperPipe; C export
+ * instrument.cpp - implementation of class HPInstrument; C export
  *
  * HyperPipe - synth with arbitrary possibilities
  *
@@ -30,7 +30,7 @@ namespace lmms::hyperpipe
 {
 
 extern "C" {
-	Plugin::Descriptor PLUGIN_EXPORT hyperpipe_plugin_descriptor = {
+	Plugin::Descriptor PLUGIN_EXPORT HyperPipe_plugin_descriptor = {
 		LMMS_STRINGIFY(PLUGIN_NAME),
 		"HyperPipe",
 		QT_TRANSLATE_NOOP("PluginBrowser", "synth with arbitrary possibilities"),
@@ -42,21 +42,21 @@ extern "C" {
 		nullptr,
 	};
 	PLUGIN_EXPORT Plugin* lmms_plugin_main(Model* model, void*) {
-		return new HyperPipe(static_cast<InstrumentTrack*>(model));
+		return new HPInstrument(static_cast<InstrumentTrack*>(model));
 	}
 }
 
-HyperPipe::HyperPipe(InstrumentTrack* instrument_track) :
-		Instrument(instrument_track, &hyperpipe_plugin_descriptor),
+HPInstrument::HPInstrument(InstrumentTrack* instrumentTrack) :
+		Instrument(instrumentTrack, &HyperPipe_plugin_descriptor),
 		m_model(this)
 {
 }
 
-QString HyperPipe::nodeName() const {
-	return hyperpipe_plugin_descriptor.name;
+QString HPInstrument::nodeName() const {
+	return HyperPipe_plugin_descriptor.name;
 }
 
-void HyperPipe::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
+void HPInstrument::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
 {
 	if (nph->totalFramesPlayed() == 0 || nph->m_pluginData == nullptr) {
 		if (nph->m_pluginData != nullptr) {
@@ -78,23 +78,23 @@ void HyperPipe::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
 	instrumentTrack()->processAudioBuffer(working_buffer, frames + offset, nph);
 }
 
-void HyperPipe::deleteNotePluginData(NotePlayHandle* nph) {
+void HPInstrument::deleteNotePluginData(NotePlayHandle* nph) {
 	delete static_cast<HPSynth*>(nph->m_pluginData);
 }
 
-void HyperPipe::saveSettings(QDomDocument& doc, QDomElement& parent)
+void HPInstrument::saveSettings(QDomDocument& doc, QDomElement& parent)
 {
 }
 
-void HyperPipe::loadSettings(const QDomElement& preset)
+void HPInstrument::loadSettings(const QDomElement& preset)
 {
 }
 
-gui::PluginView* HyperPipe::instantiateView(QWidget* parent) {
+gui::PluginView* HPInstrument::instantiateView(QWidget* parent) {
 	return new HPView(this, parent);
 }
 
-void HyperPipe::chNodeType(string nodeType, size_t model_i)
+void HPInstrument::chNodeType(string nodeType, size_t model_i)
 {
 	if (nodeType == m_model.m_nodes[model_i]->name()) {
 		return;
