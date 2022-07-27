@@ -32,6 +32,7 @@
 #include "InstrumentView.h"
 #include "InstrumentTrack.h"
 #include "Knob.h"
+#include "LcdSpinBox.h"
 #include "lmms_math.h"
 #include "NotePlayHandle.h"
 #include "plugin_export.h"
@@ -64,10 +65,12 @@ class HPModel : QObject
 public:
 	HPModel(Instrument* instrument);
 	struct Node {
+		Node(Instrument* instrument);
 		virtual ~Node() = default;
 		/*! Calls the synth node constructor that corresponds to the derived model struct. */
 		virtual unique_ptr<HPNode> instantiate(shared_ptr<Node> self) = 0;
 		virtual string name() = 0;
+		shared_ptr<IntModel> m_pipe;
 	};
 	struct Noise : public Node {
 		Noise(Instrument* instrument);
@@ -101,6 +104,7 @@ class HPNode : QObject
 public:
 	virtual ~HPNode() = default;
 	virtual float processFrame(float freq, float srate) = 0;
+	vector<unique_ptr<HPNode>> m_prev;
 };
 
 class HPOsc : public HPNode
@@ -233,6 +237,7 @@ private:
 	size_t m_model_i = 0;
 	ComboBox m_nodeType;
 	ComboBoxModel m_nodeTypeModel;
+	LcdSpinBox m_pipe;
 	PixmapButton m_prev;
 	PixmapButton m_next;
 	PixmapButton m_moveUp;

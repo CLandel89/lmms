@@ -71,7 +71,13 @@ size_t HPModel::size() {
 	return m_nodes.size();
 }
 
+HPModel::Node::Node(Instrument* instrument) :
+		m_pipe(make_shared<IntModel>(0, 0, 99, instrument, tr("pipe")))
+{
+}
+
 HPModel::Noise::Noise(Instrument* instrument) :
+		Node(instrument),
 		m_spike(make_shared<FloatModel>(4.0f, 0.0f, 20.0f, 0.1f, instrument, tr("spike")))
 {
 }
@@ -87,6 +93,7 @@ string HPModel::Noise::name() {
 }
 
 HPModel::Sine::Sine(Instrument* instrument) :
+		Node(instrument),
 		m_sawify(make_shared<FloatModel>(0.0f, 0.0f, 1.0f, 0.01f, instrument, tr("sawify")))
 {
 }
@@ -102,6 +109,7 @@ string HPModel::Sine::name() {
 }
 
 HPModel::Shapes::Shapes(Instrument* instrument) :
+		Node(instrument),
 		m_shape(make_shared<FloatModel>(0.0f, -3.0f, 3.0f, 0.01f, instrument, tr("shape"))),
 		m_jitter(make_shared<FloatModel>(0.0f, -3.0f, 3.0f, 0.01f, instrument, tr("jitter")))
 {

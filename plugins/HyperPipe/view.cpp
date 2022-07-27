@@ -36,6 +36,7 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		m_sine(this, instrument),
 		m_instrument(instrument),
 		m_nodeType(this, "node type"),
+		m_pipe(2, this, "pipe"),
 		m_prev(this),
 		m_next(this),
 		m_moveUp(this),
@@ -44,6 +45,8 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		m_append(this),
 		m_moveDown(this)
 {
+	auto curNode = instrument->m_model.m_nodes[m_model_i];
+
 	// node view
 	m_noise.moveRel(0, 60);
 	m_noise.hide();
@@ -59,39 +62,41 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 	m_nodeTypeModel.addItem(tr("sine"));
 	connect(&m_nodeTypeModel, SIGNAL(dataChanged()), this, SLOT(s_chNodeType()));
 	m_nodeType.setModel(&m_nodeTypeModel);
-	auto curNode = instrument->m_model.m_nodes[m_model_i];
 	m_nodeTypeModel.setValue(
 		m_nodeTypeModel.findText(QString::fromStdString(curNode->name()))
 	); //=>call to this->s_chNodeType
 
+	m_pipe.move(120, 30);
+	m_pipe.setModel(curNode->m_pipe.get());
+
 	// node move/create/delete buttons
 	m_prev.setActiveGraphic(PLUGIN_NAME::getIconPixmap("prev"));
 	m_prev.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("prev"));
-	m_prev.move(10, 0);
+	m_prev.move(10, 5);
 	connect(&m_prev, SIGNAL(clicked()), this, SLOT(s_prev()));
 	m_next.setActiveGraphic(PLUGIN_NAME::getIconPixmap("next"));
 	m_next.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("next"));
-	m_next.move(40, 0);
+	m_next.move(40, 5);
 	connect(&m_next, SIGNAL(clicked()), this, SLOT(s_next()));
 	m_moveUp.setActiveGraphic(PLUGIN_NAME::getIconPixmap("moveUp"));
 	m_moveUp.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("moveUp"));
-	m_moveUp.move(80, 0);
+	m_moveUp.move(80, 5);
 	connect(&m_moveUp, SIGNAL(clicked()), this, SLOT(s_moveUp()));
 	m_prepend.setActiveGraphic(PLUGIN_NAME::getIconPixmap("prepend"));
 	m_prepend.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("prepend"));
-	m_prepend.move(110, 0);
+	m_prepend.move(110, 5);
 	connect(&m_prepend, SIGNAL(clicked()), this, SLOT(s_prepend()));
 	m_delete.setActiveGraphic(PLUGIN_NAME::getIconPixmap("delete"));
 	m_delete.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("delete"));
-	m_delete.move(140, 0);
+	m_delete.move(140, 5);
 	connect(&m_delete, SIGNAL(clicked()), this, SLOT(s_delete()));
 	m_append.setActiveGraphic(PLUGIN_NAME::getIconPixmap("append"));
 	m_append.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("append"));
-	m_append.move(170, 0);
+	m_append.move(170, 5);
 	connect(&m_append, SIGNAL(clicked()), this, SLOT(s_append()));
 	m_moveDown.setActiveGraphic(PLUGIN_NAME::getIconPixmap("moveDown"));
 	m_moveDown.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("moveDown"));
-	m_moveDown.move(200, 0);
+	m_moveDown.move(200, 5);
 	connect(&m_moveDown, SIGNAL(clicked()), this, SLOT(s_moveDown()));
 }
 
@@ -133,6 +138,7 @@ void HPView::updateNodeView() {
 		throw invalid_argument("view implementation missing for HyperPipe \"" + modelNode->name() + "\"");
 	}
 	m_curNode->show();
+	m_pipe.setModel(modelNode->m_pipe.get());
 }
 
 void HPView::s_prev() {
