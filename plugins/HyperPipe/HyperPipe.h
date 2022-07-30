@@ -135,6 +135,7 @@ public:
 	float m_shape_fb = 0.0f;
 	shared_ptr<FloatModel> m_jitter = nullptr;
 	float m_jitter_fb = 0.0f;
+	float m_jitterState = 0.0f;
 private:
 	float shape(float ph);
 };
@@ -257,3 +258,15 @@ private slots:
 };
 
 } // namespace lmms::gui::hyperpipe
+
+// any ad-hoc utilities
+namespace lmms::hyperpipe {
+/*! Smooth step, cosine-based.
+ * Smoothes out rough changes near 0.0f and 1.0f. */
+inline float sstep(float a) {
+	// cos: 1.0...-1.0 (...1.0)
+	// -cos: -1.0...1.0
+	// -cos + 1.0: 0.0...2.0
+	return (-cosf(a * F_PI) + 1.0f) / 2.0f;
+}
+}

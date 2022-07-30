@@ -111,7 +111,7 @@ string HPModel::Sine::name() {
 HPModel::Shapes::Shapes(Instrument* instrument) :
 		Node(instrument),
 		m_shape(make_shared<FloatModel>(0.0f, -3.0f, 3.0f, 0.01f, instrument, tr("shape"))),
-		m_jitter(make_shared<FloatModel>(0.0f, -3.0f, 3.0f, 0.01f, instrument, tr("jitter")))
+		m_jitter(make_shared<FloatModel>(0.0f, 0.0f, 100.0f, 1.0f, instrument, tr("jitter")))
 {
 }
 
