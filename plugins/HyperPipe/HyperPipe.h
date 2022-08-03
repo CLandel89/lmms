@@ -1,28 +1,27 @@
 /*
- * HyperPipe.h - declaration of all HyperPipe classes; includes; "using namespace"s
- *
- * HyperPipe - synth with arbitrary possibilities
- *
- * Copyright (c) 2022 Christian Landel
- *
- * This file is part of LMMS - https://lmms.io
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public
- * License along with this program (see COPYING); if not, write to the
- * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301 USA.
- *
- */
+	HyperPipe.h - declaration of all HyperPipe classes; includes; "using namespace"s
+
+	HyperPipe - synth with arbitrary possibilities
+
+	Copyright (c) 2022 Christian Landel
+
+	This file is part of LMMS - https://lmms.io
+
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public
+	License as published by the Free Software Foundation; either
+	version 2 of the License, or (at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	General Public License for more details.
+
+	You should have received a copy of the GNU General Public
+	License along with this program (see COPYING); if not, write to the
+	Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+	Boston, MA 02110-1301 USA.
+*/
 
 #include "AudioEngine.h"
 #include "PixmapButton.h"
@@ -55,10 +54,10 @@ namespace lmms::hyperpipe
 
 class HPNode;
 
-/*!
- * The HyperPipe data model.
- * An instance of this class contains the plugin part of a preset.
- */
+/**
+	The HyperPipe data model.
+	An instance of this class contains the plugin part of a preset.
+*/
 class HPModel : QObject
 {
 	Q_OBJECT
@@ -67,11 +66,11 @@ public:
 	struct Node {
 		Node(Instrument* instrument);
 		virtual ~Node() = default;
-		/*! Calls the synth node constructor that corresponds to the derived model struct. */
+		//! Calls the synth node constructor that corresponds to the derived model struct.
 		virtual unique_ptr<HPNode> instantiate(shared_ptr<Node> self) = 0;
 		virtual string name() = 0;
 		shared_ptr<IntModel> m_pipe;
-		/*! "Argument" pipes which mix with or modulate the "current" pipe. */
+		//! "Argument" pipes which mix with or modulate the "current" pipe.
 		vector<shared_ptr<IntModel>> m_arguments;
 	};
 	struct Noise : public Node {
@@ -100,18 +99,18 @@ public:
 	size_t size();
 };
 
-/*!
- * Base class for any HP synth and effect node.
- */
+/**
+	Base class for any HP synth and effect node.
+*/
 class HPNode : QObject
 {
 	Q_OBJECT
 public:
 	virtual ~HPNode() = default;
 	virtual float processFrame(float freq, float srate) = 0;
-	/*! Previous node with same pipe № which HPSynth puts here. */
+	//! Previous node with same pipe № which HPSynth puts here.
 	unique_ptr<HPNode> m_prev = nullptr;
-	/*! "Argument" nodes which HPSynth puts here. */
+	//! "Argument" nodes which HPSynth puts here.
 	vector<unique_ptr<HPNode>> m_arguments;
 };
 
@@ -161,10 +160,10 @@ private:
 
 class HPInstrument;
 
-/*!
- * Every note played by HP is represented by an instance of this class.
- * Creates and deletes HPNode instances.
- */
+/**
+	Every note played by HP is represented by an instance of this class.
+	Creates and deletes HPNode instances.
+*/
 class HPSynth
 {
 public:
@@ -259,22 +258,24 @@ private:
 	PixmapButton m_append;
 	PixmapButton m_moveDown;
 private slots:
-	void s_chNodeType();
-	void s_prev();
-	void s_next();
-	void s_moveUp();
-	void s_prepend();
-	void s_delete();
-	void s_append();
-	void s_moveDown();
+	void sl_chNodeType();
+	void sl_prev();
+	void sl_next();
+	void sl_moveUp();
+	void sl_prepend();
+	void sl_delete();
+	void sl_append();
+	void sl_moveDown();
 };
 
 } // namespace lmms::gui::hyperpipe
 
 // any ad-hoc utilities
 namespace lmms::hyperpipe {
-/*! Smooth step, cosine-based.
- * Smoothes out rough changes near 0.0f and 1.0f. */
+/**
+	Smooth step, cosine-based.
+	Smoothes out rough changes near 0.0f and 1.0f.
+*/
 inline float sstep(float a) {
 	// cos: 1.0...-1.0 (...1.0)
 	// -cos: -1.0...1.0
