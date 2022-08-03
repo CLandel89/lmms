@@ -71,6 +71,8 @@ public:
 		virtual unique_ptr<HPNode> instantiate(shared_ptr<Node> self) = 0;
 		virtual string name() = 0;
 		shared_ptr<IntModel> m_pipe;
+		/*! "Argument" pipes which mix with or modulate the "current" pipe. */
+		vector<shared_ptr<IntModel>> m_arguments;
 	};
 	struct Noise : public Node {
 		Noise(Instrument* instrument);
@@ -98,13 +100,19 @@ public:
 	size_t size();
 };
 
+/*!
+ * Base class for any HP synth and effect node.
+ */
 class HPNode : QObject
 {
 	Q_OBJECT
 public:
 	virtual ~HPNode() = default;
 	virtual float processFrame(float freq, float srate) = 0;
-	vector<unique_ptr<HPNode>> m_prev;
+	/*! Previous node with same pipe № which HPSynth puts here. */
+	unique_ptr<HPNode> m_prev = nullptr;
+	/*! "Argument" nodes which HPSynth puts here. */
+	vector<unique_ptr<HPNode>> m_arguments;
 };
 
 class HPOsc : public HPNode
@@ -153,6 +161,10 @@ private:
 
 class HPInstrument;
 
+/*!
+ * Every note played by HP is represented by an instance of this class.
+ * Creates and deletes HPNode instances.
+ */
 class HPSynth
 {
 public:
