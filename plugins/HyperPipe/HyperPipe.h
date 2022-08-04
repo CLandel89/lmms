@@ -234,6 +234,28 @@ private:
 	Knob m_jitter;
 };
 
+class HPVArguments : QObject {
+	Q_OBJECT
+public:
+	HPVArguments(HPView* view, HPInstrument* instrument);
+	void setModel(shared_ptr<HPModel::Node> model);
+private:
+	void update();
+	HPInstrument *m_instrument;
+	shared_ptr<HPModel::Node> m_model = nullptr;
+	int m_pos = 0;
+	vector<unique_ptr<LcdSpinBox>> m_pipes;
+	PixmapButton m_left;
+	PixmapButton m_right;
+	PixmapButton m_add;
+	PixmapButton m_delete;
+private slots:
+	void sl_left();
+	void sl_right();
+	void sl_add();
+	void sl_delete();
+};
+
 class HPView : public InstrumentView //InstrumentViewFixedSize
 {
 	Q_OBJECT
@@ -257,6 +279,8 @@ private:
 	PixmapButton m_delete;
 	PixmapButton m_append;
 	PixmapButton m_moveDown;
+	HPVArguments m_arguments;
+
 private slots:
 	void sl_chNodeType();
 	void sl_prev();

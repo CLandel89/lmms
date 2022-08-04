@@ -28,6 +28,8 @@
 namespace lmms::gui::hyperpipe
 {
 
+inline const size_t VW = 250, VH = 250;
+
 HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent),
 		m_noise(this, instrument),
@@ -42,7 +44,8 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		m_prepend(this),
 		m_delete(this),
 		m_append(this),
-		m_moveDown(this)
+		m_moveDown(this),
+		m_arguments(this, instrument)
 {
 	auto curNode = instrument->m_model.m_nodes[m_model_i];
 
@@ -138,6 +141,7 @@ void HPView::updateNodeView() {
 	}
 	m_curNode->show();
 	m_pipe.setModel(modelNode->m_pipe.get());
+	m_arguments.setModel(modelNode);
 }
 
 void HPView::sl_prev() {
@@ -186,6 +190,101 @@ void HPView::sl_moveDown() {
 	swap(nodes[m_model_i], nodes[m_model_i + 1]);
 	m_model_i++;
 	updateNodeView();
+}
+
+HPVArguments::HPVArguments(HPView* view, HPInstrument* instrument) :
+		m_instrument(instrument),
+		m_left(view),
+		m_right(view),
+		m_add(view),
+		m_delete(view)
+{
+	m_add.setActiveGraphic(PLUGIN_NAME::getIconPixmap("plus"));
+	m_add.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("plus"));
+	m_add.move(5, VH - 30);
+	connect(&m_add, SIGNAL(clicked()), this, SLOT(sl_add()));
+	m_delete.setActiveGraphic(PLUGIN_NAME::getIconPixmap("minus"));
+	m_delete.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("minus"));
+	m_delete.move(30, VH - 30);
+	connect(&m_delete, SIGNAL(clicked()), this, SLOT(sl_delete()));
+	const int argw = 35;
+	const size_t nShown = 4;
+	m_left.setActiveGraphic(PLUGIN_NAME::getIconPixmap("left"));
+	m_left.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("left"));
+	m_left.move(VW - 2 * 25 - nShown * argw, VH - 30);
+	connect(&m_left, SIGNAL(clicked()), this, SLOT(sl_left()));
+	for (size_t li = 0; li < nShown; li++) {
+		auto pipe = make_unique<LcdSpinBox>(2, view, "argument");
+		pipe->move(VW + (-nShown + li) * argw - 25, VH - 30);
+		m_pipes.emplace_back(std::move(pipe));
+	}
+	m_right.setActiveGraphic(PLUGIN_NAME::getIconPixmap("right"));
+	m_right.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("right"));
+	m_right.move(VW - 25, VH - 30);
+	connect(&m_right, SIGNAL(clicked()), this, SLOT(sl_right()));
+}
+
+void HPVArguments::setModel(shared_ptr<HPModel::Node> model) {
+	if (model == m_model) {
+		return;
+	}
+	m_pos = 0;
+	m_model = model;
+	update();
+}
+
+void HPVArguments::update() {
+	if (m_model == nullptr) {
+		for (auto& pipe : m_pipes) {
+			pipe->hide();
+		}
+		return;
+	}
+	const int maxPos = m_model->m_arguments.size() - static_cast<int>(m_pipes.size());
+	if (m_pos > maxPos) {
+		m_pos = maxPos;
+	}
+	if (m_pos < 0) {
+		m_pos = 0;
+	}
+	for (size_t li = 0; li < m_pipes.size(); li++) {
+		auto ai = m_pos + li;
+		if (m_model->m_arguments.size() > ai) {
+			m_pipes[li]->show();
+			m_pipes[li]->setModel(m_model->m_arguments[ai].get());
+		}
+		else {
+			m_pipes[li]->hide();
+		}
+	}
+}
+
+void HPVArguments::sl_left() {
+	//conditions checked and corrected in update()
+	m_pos--;
+	update();
+}
+
+void HPVArguments::sl_right() {
+	m_pos++;
+	update();
+}
+
+void HPVArguments::sl_add() {
+	if (m_model == nullptr) { return; }
+	const auto ai = m_model->m_arguments.size();
+	m_model->m_arguments.emplace_back(
+		make_shared<IntModel>(0, 0, 99, m_instrument, tr("argument" + ai))
+	);
+	m_pos++;
+	update();
+}
+
+void HPVArguments::sl_delete() {
+	if (m_model == nullptr) { return; }
+	if (m_model->m_arguments.size() <= 0) { return; }
+	m_model->m_arguments.pop_back();
+	update();
 }
 
 void HPNodeView::hide() {
