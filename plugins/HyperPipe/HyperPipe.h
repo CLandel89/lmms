@@ -58,9 +58,8 @@ class HPNode;
 	The HyperPipe data model.
 	An instance of this class contains the plugin part of a preset.
 */
-class HPModel : QObject
+class HPModel
 {
-	Q_OBJECT
 public:
 	HPModel(Instrument* instrument);
 	struct Node {
@@ -102,9 +101,8 @@ public:
 /**
 	Base class for any HP synth and effect node.
 */
-class HPNode : QObject
+class HPNode
 {
-	Q_OBJECT
 public:
 	virtual ~HPNode() = default;
 	virtual float processFrame(float freq, float srate) = 0;
