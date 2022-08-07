@@ -1,5 +1,5 @@
 /*
-	instrument.cpp - implementation of class HPInstrument; C export
+	instrument.cpp - C export; implementation of classes HPInstrument and HPDefinitionBase
 
 	HyperPipe - synth with arbitrary possibilities
 
@@ -45,8 +45,21 @@ extern "C" {
 	}
 }
 
+inline map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument* instrument) {
+	vector<unique_ptr<HPDefinitionBase>> definitions;
+	definitions.emplace_back(make_unique<HPDefinition<HPNoiseModel>>(instrument));
+	definitions.emplace_back(make_unique<HPDefinition<HPShapesModel>>(instrument));
+	definitions.emplace_back(make_unique<HPDefinition<HPSineModel>>(instrument));
+	map<string, unique_ptr<HPDefinitionBase>> result;
+	for (auto& definition : definitions) {
+		result[definition->name()] = move(definition);
+	}
+	return result;
+}
+
 HPInstrument::HPInstrument(InstrumentTrack* instrumentTrack) :
 		Instrument(instrumentTrack, &HyperPipe_plugin_descriptor),
+		m_definitions(createDefinitions(this)),
 		m_model(this)
 {
 }
@@ -98,18 +111,11 @@ void HPInstrument::chNodeType(string nodeType, size_t model_i)
 	if (nodeType == m_model.m_nodes[model_i]->name()) {
 		return;
 	}
-	if (nodeType == "noise") {
-		m_model.m_nodes[model_i] = make_shared<HPModel::Noise>(this);
-	}
-	else if (nodeType == "shapes") {
-		m_model.m_nodes[model_i] = make_shared<HPModel::Shapes>(this);
-	}
-	else if (nodeType == "sine") {
-		m_model.m_nodes[model_i] = make_shared<HPModel::Sine>(this);
-	}
-	else {
-		throw invalid_argument("model implementation missing for HyperPipe \"" + nodeType + "\"");
-	}
+	m_model.m_nodes[model_i] = m_definitions[nodeType]->newNode();
 }
+
+HPDefinitionBase::HPDefinitionBase(HPInstrument* instrument) :
+	m_instrument(instrument)
+{}
 
 } // namespace lmms::hyperpipe

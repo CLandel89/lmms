@@ -1,0 +1,208 @@
+/*
+	shapes.cpp - implementation of the "shapes" node type
+
+	HyperPipe - synth with arbitrary possibilities
+
+	Copyright (c) 2022 Christian Landel
+
+	This file is part of LMMS - https://lmms.io
+
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public
+	License as published by the Free Software Foundation; either
+	version 2 of the License, or (at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+	General Public License for more details.
+
+	You should have received a copy of the GNU General Public
+	License along with this program (see COPYING); if not, write to the
+	Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+	Boston, MA 02110-1301 USA.
+*/
+
+#include "../HyperPipe.h"
+
+namespace lmms::hyperpipe
+{
+
+const string SHAPES_NAME = "shapes";
+const string HPDefinitionBase::DEFAULT_TYPE = SHAPES_NAME;
+
+inline unique_ptr<HPNode> instantiateShapes(shared_ptr<HPModel::Node> self);
+
+struct HPShapesModel : public HPModel::Node {
+	HPShapesModel(Instrument* instrument) :
+			Node(instrument),
+			m_shape(make_shared<FloatModel>(0.0f, -3.0f, 3.0f, 0.01f, instrument, QString("shape"))),
+			m_jitter(make_shared<FloatModel>(0.0f, 0.0f, 100.0f, 1.0f, instrument, QString("jitter")))
+	{}
+	shared_ptr<FloatModel> m_shape;
+	shared_ptr<FloatModel> m_jitter;
+	unique_ptr<HPNode> instantiate(shared_ptr<Node> self) {
+		return instantiateShapes(self);
+	}
+	string name() {
+		return SHAPES_NAME;
+	}
+	void load(string params) {}
+	string save() { return ""; }
+};
+
+inline float saw2tri(float ph, float morph)
+{
+	// left and right edge of each segment
+	float le, re;
+	le = 0.0f;
+	re = morph * 0.25f;
+	if (ph < re) {
+		//0.0...1.0
+		return ph / re;
+	}
+	le = re;
+	re = 1.0f - morph * 0.25f;
+	if (ph < re) {
+		//this is the main (saw) shape
+		//1.0...-1.0
+		return 1.0f - 2.0f * (ph - le) / (re - le);
+	}
+	le = re;
+	re = 1.0f;
+	//-1.0...0.0
+	return -1.0f + (ph - le) / (re - le);
+}
+
+inline float sqr2saw(float ph, float morph)
+{
+	// left and right edge of each segment
+	float le, re;
+	le = 0.0f;
+	re = 0.5f - morph * 0.5f;
+	if (ph < re) {
+		return 1.0f;
+	}
+	le = re;
+	re = 0.5f + morph * 0.5f;
+	if (ph < re) {
+		return 1.0f - 2.0f * (ph - le) / (re - le);
+	}
+	//re = 1.0f;
+	return -1.0f;
+}
+
+inline float tri2sqr(float ph, float morph)
+{
+	// left and right edge of each segment
+	float le, re;
+	le = 0.0;
+	re = 0.25f - morph * 0.25f;
+	if (ph < re) {
+		return ph / re;
+	}
+	//le = re;
+	re = 0.25f + morph * 0.25f;
+	if (ph < re) {
+		return 1.0f;
+	}
+	le = re;
+	re = 0.75f - morph * 0.25f;
+	if (ph < re) {
+		return 1.0f - 2.0f * (ph - le) / (re - le);
+	}
+	le = re;
+	re = 0.75f + morph * 0.25f;
+	if (ph < re) {
+		return -1.0f;
+	}
+	le = re;
+	re = 1.0f;
+	return -1.0f + (ph - le) / (re - le);
+}
+
+class HPShapes : public HPOsc
+{
+public:
+	HPShapes(shared_ptr<HPShapesModel> model) {
+		if (model != nullptr) {
+			m_shape = model->m_shape;
+			m_jitter = model->m_jitter;
+		}
+	}
+	shared_ptr<FloatModel> m_shape = nullptr;
+	float m_shape_fb = 0.0f;
+	shared_ptr<FloatModel> m_jitter = nullptr;
+	float m_jitter_fb = 0.0f;
+	float m_jitterState = 0.0f;
+private:
+	float shape(float ph) {
+		float shape = m_shape != nullptr ? m_shape->value() : m_shape_fb;
+		float jitter = m_jitter != nullptr ? m_jitter->value() : m_jitter_fb;
+		//continuously add to the jittering
+		m_jitterState = (127.0f * m_jitterState + fastRandf(jitter)) / 128.0f;
+		float finalShape = shape + m_jitterState - 0.5f * jitter;
+		while (finalShape < 0.0f) { finalShape += 3.0f; }
+		while (finalShape >= 3.0f) { finalShape -= 3.0f; }
+		float morph = fraction(finalShape);
+		morph = sstep(morph);
+		// amp: the shapes with vertical edges sound too loud
+		if (finalShape < 1.0f) {
+			float amp = 0.4f + 0.6f * morph;
+			return amp * saw2tri(ph, morph);
+		}
+		if (finalShape < 2.0f) {
+			float amp = 1.0f - 0.7f * morph;
+			return amp * tri2sqr(ph, morph);
+		}
+		float amp = 0.3f + 0.1f * morph;
+		return amp * sqr2saw(ph, morph);
+	}
+};
+
+inline unique_ptr<HPNode> instantiateShapes(shared_ptr<HPModel::Node> self) {
+	return make_unique<HPShapes>(
+		static_pointer_cast<HPShapesModel>(self)
+	);
+}
+
+class HPShapesView : public HPNodeView {
+public:
+	HPShapesView(HPView* view) :
+			m_shape(view, "shape"),
+			m_jitter(view, "jitter")
+	{
+		m_widgets.emplace_back(&m_shape);
+		m_widgets.emplace_back(&m_jitter);
+		m_jitter.move(40, 0);
+	}
+	void setModel(shared_ptr<HPModel::Node> model) {
+		shared_ptr<HPShapesModel> modelCast = static_pointer_cast<HPShapesModel>(model);
+		m_shape.setModel(modelCast->m_shape.get());
+		m_jitter.setModel(modelCast->m_jitter.get());
+	}
+private:
+	Knob m_shape;
+	Knob m_jitter;
+};
+
+using Definition = HPDefinition<HPShapesModel>;
+
+template<> Definition::HPDefinition(HPInstrument* instrument) :
+		HPDefinitionBase(instrument)
+{}
+
+template<> Definition::~HPDefinition() = default;
+
+template<> string Definition::name() { return SHAPES_NAME; }
+
+template<> shared_ptr<HPShapesModel> Definition::newNodeImpl() {
+	return make_shared<HPShapesModel>(m_instrument);
+}
+
+template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {
+	return make_unique<HPShapesView>(hpview);
+}
+
+
+} // namespace lmms::hyperpipe

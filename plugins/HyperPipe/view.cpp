@@ -32,9 +32,6 @@ inline const size_t VW = 250, VH = 250;
 
 HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent),
-		m_noise(this, instrument),
-		m_shapes(this, instrument),
-		m_sine(this, instrument),
 		m_instrument(instrument),
 		m_nodeType(this, "node type"),
 		m_pipe(2, this, "pipe"),
@@ -50,24 +47,23 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 	auto curNode = instrument->m_model.m_nodes[m_model_i];
 
 	// node view
-	m_noise.moveRel(0, 60);
-	m_noise.hide();
-	m_shapes.moveRel(0, 60);
-	m_shapes.hide();
-	m_sine.moveRel(0, 60);
-	m_sine.hide();
-
+	for (auto& definition : instrument->m_definitions) {
+		m_nodeViews[definition.second->name()] =
+			definition.second->instantiateView(this);
+		m_nodeViews[definition.second->name()]->moveRel(0, 60);
+		m_nodeViews[definition.second->name()]->hide();
+	}
 	// node type combo box
 	m_nodeType.move(0, 30);
-	m_nodeTypeModel.addItem(tr("noise"));
-	m_nodeTypeModel.addItem(tr("shapes"));
-	m_nodeTypeModel.addItem(tr("sine"));
+	for (auto& definition : instrument->m_definitions) {
+		m_nodeTypeModel.addItem(QString::fromStdString(definition.first));
+	}
 	connect(&m_nodeTypeModel, SIGNAL(dataChanged()), this, SLOT(sl_chNodeType()));
 	m_nodeType.setModel(&m_nodeTypeModel);
 	m_nodeTypeModel.setValue(
 		m_nodeTypeModel.findText(QString::fromStdString(curNode->name()))
 	); //=>call to this->s_chNodeType
-
+	// node pipe number
 	m_pipe.move(120, 30);
 	m_pipe.setModel(curNode->m_pipe.get());
 
@@ -124,21 +120,8 @@ void HPView::updateNodeView() {
 	if (m_curNode != nullptr) {
 		m_curNode->hide();
 	}
-	if (nodeType == "noise") {
-		m_curNode = &m_noise;
-		m_noise.setModel(static_pointer_cast<HPModel::Noise>(modelNode));
-	}
-	else if (nodeType == "shapes") {
-		m_curNode = &m_shapes;
-		m_shapes.setModel(static_pointer_cast<HPModel::Shapes>(modelNode));
-	}
-	else if (nodeType == "sine") {
-		m_curNode = &m_sine;
-		m_sine.setModel(static_pointer_cast<HPModel::Sine>(modelNode));
-	}
-	else {
-		throw invalid_argument("view implementation missing for HyperPipe \"" + modelNode->name() + "\"");
-	}
+	m_curNode = m_nodeViews[nodeType].get();
+	m_curNode->setModel(modelNode);
 	m_curNode->show();
 	m_pipe.setModel(modelNode->m_pipe.get());
 	m_arguments.setModel(modelNode);
@@ -165,7 +148,7 @@ void HPView::sl_moveUp() {
 }
 
 void HPView::sl_prepend() {
-	auto mnode = make_shared<HPModel::Shapes>(m_instrument);
+	auto mnode = m_instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode();
 	m_instrument->m_model.prepend(mnode, m_model_i);
 	updateNodeView();
 }
@@ -178,7 +161,7 @@ void HPView::sl_delete() {
 }
 
 void HPView::sl_append() {
-	auto mnode = make_shared<HPModel::Shapes>(m_instrument);
+	auto mnode = m_instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode();
 	m_instrument->m_model.append(mnode, m_model_i);
 	m_model_i++;
 	updateNodeView();
@@ -304,49 +287,6 @@ void HPNodeView::show() {
 	for (auto widget : m_widgets) {
 		widget->show();
 	}
-}
-
-HPNoiseView::HPNoiseView(HPView* view, HPInstrument* instrument) :
-		m_spike(view, "spike")
-{
-	m_widgets.emplace_back(&m_spike);
-}
-string HPNoiseView::name() {
-	return "noise";
-}
-
-void HPNoiseView::setModel(shared_ptr<HPModel::Noise> model) {
-	m_spike.setModel(model->m_spike.get());
-}
-
-HPSineView::HPSineView(HPView* view, HPInstrument* instrument) :
-		m_sawify(view, "sawify")
-{
-	m_widgets.emplace_back(&m_sawify);
-}
-string HPSineView::name() {
-	return "sine";
-}
-
-void HPSineView::setModel(shared_ptr<HPModel::Sine> model) {
-	m_sawify.setModel(model->m_sawify.get());
-}
-
-HPShapesView::HPShapesView(HPView* view, HPInstrument* instrument) :
-		m_shape(view, "shape"),
-		m_jitter(view, "jitter")
-{
-	m_widgets.emplace_back(&m_shape);
-	m_widgets.emplace_back(&m_jitter);
-	m_jitter.move(40, 0);
-}
-string HPShapesView::name() {
-	return "shapes";
-}
-
-void HPShapesView::setModel(shared_ptr<HPModel::Shapes> model) {
-	m_shape.setModel(model->m_shape.get());
-	m_jitter.setModel(model->m_jitter.get());
 }
 
 } // namespace lmms::gui::hyperpipe

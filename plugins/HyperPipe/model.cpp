@@ -28,8 +28,10 @@
 namespace lmms::hyperpipe
 {
 
-HPModel::HPModel(Instrument* instrument) {
-	m_nodes.emplace_back(make_shared<HPModel::Shapes>(instrument));
+HPModel::HPModel(HPInstrument* instrument) {
+	m_nodes.emplace_back(
+		instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode()
+	);
 }
 void HPModel::prepend(shared_ptr<Node> node, size_t model_i) {
 	vector<shared_ptr<Node>> recreation;
@@ -73,55 +75,6 @@ size_t HPModel::size() {
 HPModel::Node::Node(Instrument* instrument) :
 		m_pipe(make_shared<IntModel>(0, 0, 99, instrument, QString("pipe")))
 {
-}
-
-HPModel::Noise::Noise(Instrument* instrument) :
-		Node(instrument),
-		m_spike(make_shared<FloatModel>(4.0f, 0.0f, 20.0f, 0.1f, instrument, QString("spike")))
-{
-}
-
-unique_ptr<HPNode> HPModel::Noise::instantiate(shared_ptr<HPModel::Node> self) {
-	return make_unique<HPNoise>(
-		static_pointer_cast<HPModel::Noise>(self)
-	);
-}
-
-string HPModel::Noise::name() {
-	return "noise";
-}
-
-HPModel::Sine::Sine(Instrument* instrument) :
-		Node(instrument),
-		m_sawify(make_shared<FloatModel>(0.0f, 0.0f, 1.0f, 0.01f, instrument, QString("sawify")))
-{
-}
-
-unique_ptr<HPNode> HPModel::Sine::instantiate(shared_ptr<HPModel::Node> self) {
-	return make_unique<HPSine>(
-		static_pointer_cast<HPModel::Sine>(self)
-	);
-}
-
-string HPModel::Sine::name() {
-	return "sine";
-}
-
-HPModel::Shapes::Shapes(Instrument* instrument) :
-		Node(instrument),
-		m_shape(make_shared<FloatModel>(0.0f, -3.0f, 3.0f, 0.01f, instrument, QString("shape"))),
-		m_jitter(make_shared<FloatModel>(0.0f, 0.0f, 100.0f, 1.0f, instrument, QString("jitter")))
-{
-}
-
-unique_ptr<HPNode> HPModel::Shapes::instantiate(shared_ptr<HPModel::Node> self) {
-	return make_unique<HPShapes>(
-		static_pointer_cast<HPModel::Shapes>(self)
-	);
-}
-
-string HPModel::Shapes::name() {
-	return "shapes";
 }
 
 } // namespace lmms::hyperpipe

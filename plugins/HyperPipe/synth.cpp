@@ -1,5 +1,5 @@
 /*
-	synth.cpp - implementation for note handles and of simple synth nodes
+	synth.cpp - implementation of LMMS note handles for HyperPipe
 
 	HyperPipe - synth with arbitrary possibilities
 
@@ -37,51 +37,6 @@ float HPOsc::processFrame(float freq, float srate) {
 		result += m_prev->processFrame(freq, srate);
 		number++;
 	}
-	for (auto& argument : m_arguments) {
-		result += argument->processFrame(freq, srate);
-		number++;
-	}
-	return result / number;
-}
-
-HPSine::HPSine(shared_ptr<HPModel::Sine> model) {
-	if (model != nullptr) {
-		m_sawify = model->m_sawify;
-	}
-}
-
-float HPSine::shape(float ph) {
-	float sawify = m_sawify != nullptr ? m_sawify->value() : m_sawify_fb;
-	float s = sinf(ph * F_2PI);
-	float saw = ph; //simplified and reversed
-	saw = 1.0f - sawify * saw; //ready for multiplication with s
-	return saw * s;
-}
-
-HPNoise::HPNoise(shared_ptr<HPModel::Noise> model) :
-		m_spike(model->m_spike),
-		m_osc(nullptr)
-{
-	if (model != nullptr) {
-		m_spike = model->m_spike;
-	}
-	m_osc.m_sawify_fb = 1.0f;
-}
-
-float HPNoise::processFrame(float freq, float srate) {
-	float spike = m_spike != nullptr ? m_spike->value() : m_spike_fb;
-	float osc;
-	if (m_prev == nullptr) {
-		osc = m_osc.processFrame(freq, srate);
-	}
-	else {
-		osc = m_prev->processFrame(freq, srate);
-	}
-	osc = (osc + 1.0f) / 2.0f; //0.0...1.0
-	osc = powf(osc, spike);
-	float r = 1.0f - fastRandf(2.0f);
-	float result = osc * r;
-	size_t number = 1;
 	for (auto& argument : m_arguments) {
 		result += argument->processFrame(freq, srate);
 		number++;
