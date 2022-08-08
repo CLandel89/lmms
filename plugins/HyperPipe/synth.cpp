@@ -32,7 +32,7 @@ float HPOsc::processFrame(float freq, float srate) {
 	m_ph += freq / srate;
 	m_ph = fraction(m_ph);
 	float result = shape(m_ph);
-	size_t number = 1;
+	int number = 1;
 	if (m_prev != nullptr) {
 		result += m_prev->processFrame(freq, srate);
 		number++;
@@ -49,21 +49,21 @@ HPSynth::HPSynth(HPInstrument* instrument, NotePlayHandle* nph, HPModel* model) 
 		m_nph(nph)
 {
 	// Create synth nodes by recursing this:
-	function<unique_ptr<HPNode>(size_t)> instantiate = [&model, &instantiate] (size_t i)
+	function<unique_ptr<HPNode>(int)> instantiate = [&model, &instantiate] (int i)
 	{
 		auto mnode = model->m_nodes[i];
 		auto result = mnode->instantiate(mnode);
 		unique_ptr<HPNode> prev = nullptr;
 		vector<unique_ptr<HPNode>> arguments(mnode->m_arguments.size());
 		//crawl upwards in the model (i.e., decrement j) and instantiate prev and arguments at first encounters
-		for (int j = static_cast<int>(i) - 1; j >= 0; j--) {
+		for (int j = i - 1; j >= 0; j--) {
 			auto mnode_j = model->m_nodes[j];
 			if (prev == nullptr &&
 					mnode->m_pipe->value() == mnode_j->m_pipe->value())
 			{
 				prev = instantiate(j);
 			}
-			for (size_t ai = 0; ai < mnode->m_arguments.size(); ai++) {
+			for (int ai = 0; ai < mnode->m_arguments.size(); ai++) {
 				if (arguments[ai] == nullptr &&
 						mnode->m_arguments[ai]->value() == mnode_j->m_pipe->value())
 				{

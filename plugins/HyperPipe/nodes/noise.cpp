@@ -60,8 +60,9 @@ public:
 	}
 	float processFrame(float freq, float srate) {
 		float spike = m_spike != nullptr ? m_spike->value() : m_spike_fb;
+		float makeupAmp = 0.5f + 0.33f * spike;
 		float osc = 0.0f;
-		size_t number = 0;
+		int number = 0;
 		if (m_prev != nullptr) {
 			osc = m_prev->processFrame(freq, srate);
 			number = 1;
@@ -76,10 +77,11 @@ public:
 			osc = powf(osc, spike);
 		}
 		else {
+			makeupAmp = 0.5f;
 			osc = 1.0f;
 		}
 		float r = 1.0f - fastRandf(2.0f);
-		return osc * r;
+		return makeupAmp * osc * r;
 	}
 };
 

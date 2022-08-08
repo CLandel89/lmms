@@ -45,24 +45,27 @@ extern "C" {
 	}
 }
 
-inline map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument* instrument) {
-	vector<unique_ptr<HPDefinitionBase>> definitions;
-	definitions.emplace_back(make_unique<HPDefinition<HPNoiseModel>>(instrument));
-	definitions.emplace_back(make_unique<HPDefinition<HPShapesModel>>(instrument));
-	definitions.emplace_back(make_unique<HPDefinition<HPSineModel>>(instrument));
-	map<string, unique_ptr<HPDefinitionBase>> result;
-	for (auto& definition : definitions) {
-		result[definition->name()] = move(definition);
-	}
-	return result;
+template <typename M>
+inline void createDefinition(map<string, unique_ptr<HPDefinitionBase>>& definitions, HPInstrument* instrument) {
+	unique_ptr<HPDefinitionBase> definition = static_cast<unique_ptr<HPDefinitionBase>>(
+		make_unique<HPDefinition<M>>(instrument)
+	);
+	definitions[definition->name()] = move(definition);
+}
+
+map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument* instrument) {
+	map<string, unique_ptr<HPDefinitionBase>> definitions;
+	createDefinition<HPNoiseModel>(definitions, instrument);
+	createDefinition<HPShapesModel>(definitions, instrument);
+	createDefinition<HPSineModel>(definitions, instrument);
+	return definitions;
 }
 
 HPInstrument::HPInstrument(InstrumentTrack* instrumentTrack) :
 		Instrument(instrumentTrack, &HyperPipe_plugin_descriptor),
 		m_definitions(createDefinitions(this)),
 		m_model(this)
-{
-}
+{}
 
 QString HPInstrument::nodeName() const {
 	return HyperPipe_plugin_descriptor.name;
@@ -79,11 +82,10 @@ void HPInstrument::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
 	HPSynth *synth = static_cast<HPSynth*>(nph->m_pluginData);
 	const fpp_t frames = nph->framesLeftForCurrentPeriod();
 	const f_cnt_t offset = nph->noteOffset();
-	for (size_t i = 0; i < frames; i++) {
-		working_buffer[offset + i] = synth->processFrame(
-			nph->frequency(),
-			Engine::audioEngine()->processingSampleRate()
-		);
+	const float freq = nph->frequency();
+	const float srate = Engine::audioEngine()->processingSampleRate();
+	for (int i = 0; i < frames; i++) {
+		working_buffer[offset + i] = synth->processFrame(freq, srate);
 	}
 	applyFadeIn(working_buffer, nph);
 	applyRelease(working_buffer, nph);
@@ -106,7 +108,7 @@ gui::PluginView* HPInstrument::instantiateView(QWidget* parent) {
 	return new HPView(this, parent);
 }
 
-void HPInstrument::chNodeType(string nodeType, size_t model_i)
+void HPInstrument::chNodeType(string nodeType, int model_i)
 {
 	if (nodeType == m_model.m_nodes[model_i]->name()) {
 		return;

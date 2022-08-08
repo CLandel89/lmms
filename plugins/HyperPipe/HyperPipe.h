@@ -79,10 +79,10 @@ public:
 		virtual string save() = 0;
 	};
 	vector<shared_ptr<Node>> m_nodes;
-	void prepend(shared_ptr<Node> node, size_t model_i);
-	void append(shared_ptr<Node> node, size_t model_i);
-	void remove(size_t model_i);
-	size_t size();
+	void prepend(shared_ptr<Node> node, int model_i);
+	void append(shared_ptr<Node> node, int model_i);
+	void remove(int model_i);
+	int size();
 };
 
 /**
@@ -133,7 +133,7 @@ class HPInstrument : public Instrument
 	Q_OBJECT
 public:
 	HPInstrument(InstrumentTrack* track);
-	void chNodeType(string nodeType, size_t model_i);
+	void chNodeType(string nodeType, int model_i);
 	void playNote(NotePlayHandle* nph, sampleFrame* working_buffer) override;
 	void deleteNotePluginData(NotePlayHandle* nph) override;
 	void saveSettings(QDomDocument& doc, QDomElement& parent) override;
@@ -164,6 +164,7 @@ class HPVArguments : QObject {
 	Q_OBJECT
 public:
 	HPVArguments(HPView* view, HPInstrument* instrument);
+	~HPVArguments();
 	void setModel(shared_ptr<HPModel::Node> model);
 private:
 	void update();
@@ -175,6 +176,7 @@ private:
 	PixmapButton m_right;
 	PixmapButton m_add;
 	PixmapButton m_delete;
+	bool m_destructing = false;
 private slots:
 	void sl_left();
 	void sl_right();
@@ -187,12 +189,13 @@ class HPView : public InstrumentView //InstrumentViewFixedSize
 	Q_OBJECT
 public:
 	HPView(HPInstrument* instrument, QWidget* parent);
+	~HPView();
 private:
 	void updateNodeView();
 	map<string, unique_ptr<HPNodeView>> m_nodeViews;
 	HPNodeView *m_curNode = nullptr;
 	HPInstrument *m_instrument;
-	size_t m_model_i = 0;
+	int m_model_i = 0;
 	ComboBox m_nodeType;
 	ComboBoxModel m_nodeTypeModel;
 	LcdSpinBox m_pipe;
@@ -204,6 +207,7 @@ private:
 	PixmapButton m_append;
 	PixmapButton m_moveDown;
 	HPVArguments m_arguments;
+	bool m_destructing = false;
 
 private slots:
 	void sl_chNodeType();
@@ -247,7 +251,7 @@ public:
 	~HPDefinition();
 	string name();
 	shared_ptr<HPModel::Node> newNode() {
-		return newNodeImpl();
+		return static_pointer_cast<HPModel::Node>(newNodeImpl());
 	}
 	shared_ptr<M> newNodeImpl();
 	unique_ptr<HPNodeView> instantiateView(HPView* hpview);

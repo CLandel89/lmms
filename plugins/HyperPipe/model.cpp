@@ -33,9 +33,9 @@ HPModel::HPModel(HPInstrument* instrument) {
 		instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode()
 	);
 }
-void HPModel::prepend(shared_ptr<Node> node, size_t model_i) {
+void HPModel::prepend(shared_ptr<Node> node, int model_i) {
 	vector<shared_ptr<Node>> recreation;
-	size_t i = 0;
+	int i = 0;
 	for (auto mnode : m_nodes) {
 		if (i == model_i) {
 			recreation.emplace_back(node);
@@ -45,9 +45,9 @@ void HPModel::prepend(shared_ptr<Node> node, size_t model_i) {
 	}
 	m_nodes = recreation;
 }
-void HPModel::append(shared_ptr<Node> node, size_t model_i) {
+void HPModel::append(shared_ptr<Node> node, int model_i) {
 	vector<shared_ptr<Node>> recreation;
-	size_t i = 0;
+	int i = 0;
 	for (auto mnode : m_nodes) {
 		recreation.emplace_back(mnode);
 		if (i == model_i) {
@@ -57,9 +57,9 @@ void HPModel::append(shared_ptr<Node> node, size_t model_i) {
 	}
 	m_nodes = recreation;
 }
-void HPModel::remove(size_t model_i) {
+void HPModel::remove(int model_i) {
 	vector<shared_ptr<Node>> recreation;
-	for (size_t i = 0; i < size(); i++) {
+	for (int i = 0; i < size(); i++) {
 		auto mnode = m_nodes[i];
 		if (i == model_i) {
 			continue;
@@ -68,7 +68,7 @@ void HPModel::remove(size_t model_i) {
 	}
 	m_nodes = recreation;
 }
-size_t HPModel::size() {
+int HPModel::size() {
 	return m_nodes.size();
 }
 

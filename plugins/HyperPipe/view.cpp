@@ -28,7 +28,7 @@
 namespace lmms::gui::hyperpipe
 {
 
-inline const size_t VW = 250, VH = 250;
+inline const int VW = 250, VH = 250;
 
 HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent),
@@ -98,7 +98,12 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 	connect(&m_moveDown, SIGNAL(clicked()), this, SLOT(sl_moveDown()));
 }
 
+HPView::~HPView() {
+	m_destructing = true;
+}
+
 void HPView::sl_chNodeType() {
+	if (m_destructing) { return; }
 	string nodeType = m_nodeTypeModel.currentText().toStdString();
 	auto modelNode = m_instrument->m_model.m_nodes[m_model_i];
 	if (modelNode->name() != nodeType) {
@@ -128,18 +133,21 @@ void HPView::updateNodeView() {
 }
 
 void HPView::sl_prev() {
+	if (m_destructing) { return; }
 	if (m_model_i <= 0) { return; }
 	m_model_i--;
 	updateNodeView();
 }
 
 void HPView::sl_next() {
+	if (m_destructing) { return; }
 	if (m_model_i >= m_instrument->m_model.size() - 1) { return; }
 	m_model_i++;
 	updateNodeView();
 }
 
 void HPView::sl_moveUp() {
+	if (m_destructing) { return; }
 	if (m_model_i <= 0) { return; }
 	auto &nodes = m_instrument->m_model.m_nodes;
 	swap(nodes[m_model_i], nodes[m_model_i - 1]);
@@ -148,12 +156,14 @@ void HPView::sl_moveUp() {
 }
 
 void HPView::sl_prepend() {
+	if (m_destructing) { return; }
 	auto mnode = m_instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode();
 	m_instrument->m_model.prepend(mnode, m_model_i);
 	updateNodeView();
 }
 
 void HPView::sl_delete() {
+	if (m_destructing) { return; }
 	if (m_instrument->m_model.size() <= 1) { return; }
 	m_instrument->m_model.remove(m_model_i);
 	if (m_model_i >= m_instrument->m_model.size()) { m_model_i--; }
@@ -161,6 +171,7 @@ void HPView::sl_delete() {
 }
 
 void HPView::sl_append() {
+	if (m_destructing) { return; }
 	auto mnode = m_instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode();
 	m_instrument->m_model.append(mnode, m_model_i);
 	m_model_i++;
@@ -168,6 +179,7 @@ void HPView::sl_append() {
 }
 
 void HPView::sl_moveDown() {
+	if (m_destructing) { return; }
 	if (m_model_i >= m_instrument->m_model.size() - 1) { return; }
 	auto &nodes = m_instrument->m_model.m_nodes;
 	swap(nodes[m_model_i], nodes[m_model_i + 1]);
@@ -191,12 +203,12 @@ HPVArguments::HPVArguments(HPView* view, HPInstrument* instrument) :
 	m_delete.move(30, VH - 30);
 	connect(&m_delete, SIGNAL(clicked()), this, SLOT(sl_delete()));
 	const int argw = 35;
-	const size_t nShown = 4;
+	const int nShown = 4;
 	m_left.setActiveGraphic(PLUGIN_NAME::getIconPixmap("left"));
 	m_left.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("left"));
 	m_left.move(VW - 2 * 25 - nShown * argw, VH - 30);
 	connect(&m_left, SIGNAL(clicked()), this, SLOT(sl_left()));
-	for (size_t li = 0; li < nShown; li++) {
+	for (int li = 0; li < nShown; li++) {
 		auto pipe = make_unique<LcdSpinBox>(2, view, "argument");
 		pipe->move(VW + (-nShown + li) * argw - 25, VH - 30);
 		m_pipes.emplace_back(std::move(pipe));
@@ -205,6 +217,10 @@ HPVArguments::HPVArguments(HPView* view, HPInstrument* instrument) :
 	m_right.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("right"));
 	m_right.move(VW - 25, VH - 30);
 	connect(&m_right, SIGNAL(clicked()), this, SLOT(sl_right()));
+}
+
+HPVArguments::~HPVArguments() {
+	m_destructing = true;
 }
 
 void HPVArguments::setModel(shared_ptr<HPModel::Node> model) {
@@ -223,14 +239,14 @@ void HPVArguments::update() {
 		}
 		return;
 	}
-	const int maxPos = m_model->m_arguments.size() - static_cast<int>(m_pipes.size());
+	const int maxPos = static_cast<int>(m_model->m_arguments.size()) - m_pipes.size();
 	if (m_pos > maxPos) {
 		m_pos = maxPos;
 	}
 	if (m_pos < 0) {
 		m_pos = 0;
 	}
-	for (size_t li = 0; li < m_pipes.size(); li++) {
+	for (int li = 0; li < m_pipes.size(); li++) {
 		auto ai = m_pos + li;
 		if (m_model->m_arguments.size() > ai) {
 			m_pipes[li]->show();
@@ -243,17 +259,20 @@ void HPVArguments::update() {
 }
 
 void HPVArguments::sl_left() {
+	if (m_destructing) { return; }
 	//conditions checked and corrected in update()
 	m_pos--;
 	update();
 }
 
 void HPVArguments::sl_right() {
+	if (m_destructing) { return; }
 	m_pos++;
 	update();
 }
 
 void HPVArguments::sl_add() {
+	if (m_destructing) { return; }
 	if (m_model == nullptr) { return; }
 	const auto ai = m_model->m_arguments.size();
 	m_model->m_arguments.emplace_back(
@@ -264,6 +283,7 @@ void HPVArguments::sl_add() {
 }
 
 void HPVArguments::sl_delete() {
+	if (m_destructing) { return; }
 	if (m_model == nullptr) { return; }
 	if (m_model->m_arguments.size() <= 0) { return; }
 	m_model->m_arguments.pop_back();
