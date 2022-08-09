@@ -251,7 +251,7 @@ public:
 	~HPDefinition();
 	string name();
 	shared_ptr<HPModel::Node> newNode() {
-		return static_pointer_cast<HPModel::Node>(newNodeImpl());
+		return newNodeImpl();
 	}
 	shared_ptr<M> newNodeImpl();
 	unique_ptr<HPNodeView> instantiateView(HPView* hpview);

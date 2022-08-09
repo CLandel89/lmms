@@ -46,10 +46,11 @@ extern "C" {
 }
 
 template <typename M>
-inline void createDefinition(map<string, unique_ptr<HPDefinitionBase>>& definitions, HPInstrument* instrument) {
-	unique_ptr<HPDefinitionBase> definition = static_cast<unique_ptr<HPDefinitionBase>>(
-		make_unique<HPDefinition<M>>(instrument)
-	);
+inline void createDefinition(
+		map<string, unique_ptr<HPDefinitionBase>>& definitions,
+		HPInstrument* instrument)
+{
+	unique_ptr<HPDefinitionBase> definition = make_unique<HPDefinition<M>>(instrument);
 	definitions[definition->name()] = move(definition);
 }
 
