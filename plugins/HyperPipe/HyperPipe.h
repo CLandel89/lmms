@@ -262,6 +262,7 @@ private:
 };
 
 // The types for M are:
+struct HPFmModel;
 struct HPNoiseModel;
 struct HPShapesModel;
 struct HPSineModel;

@@ -60,6 +60,10 @@ public:
 	float m_sawify_fb = 0.0f; //fallback if no model
 private:
 	float shape(float ph) {
+		if (ph < 0.5f) {
+			//this helps with FM detuning when using a "sawified" argument
+			return -shape(1.0f - ph);
+		}
 		float sawify = m_sawify != nullptr ? m_sawify->value() : m_sawify_fb;
 		float s = sinf(ph * F_2PI);
 		float saw = ph; //simplified and reversed

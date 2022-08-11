@@ -56,6 +56,7 @@ inline void createDefinition(
 
 map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument* instrument) {
 	map<string, unique_ptr<HPDefinitionBase>> definitions;
+	createDefinition<HPFmModel>(definitions, instrument);
 	createDefinition<HPNoiseModel>(definitions, instrument);
 	createDefinition<HPShapesModel>(definitions, instrument);
 	createDefinition<HPSineModel>(definitions, instrument);

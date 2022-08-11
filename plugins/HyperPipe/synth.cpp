@@ -1,5 +1,5 @@
 /*
-	synth.cpp - implementation of LMMS note handles for HyperPipe
+	synth.cpp - implementation of HPSynth and HPOsc
 
 	HyperPipe - synth with arbitrary possibilities
 
@@ -30,7 +30,8 @@ namespace lmms::hyperpipe
 
 float HPOsc::processFrame(float freq, float srate) {
 	m_ph += freq / srate;
-	m_ph = fraction(m_ph);
+	while (m_ph >= 1.0f) { m_ph -= 1.0f; }
+	while (m_ph < 0.0f) { m_ph += 1.0f; }
 	float result = shape(m_ph);
 	int number = 1;
 	if (m_prev != nullptr) {
