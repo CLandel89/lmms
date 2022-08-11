@@ -51,16 +51,11 @@ struct HPNoiseModel : public HPModel::Node {
 class HPNoise : public HPNode
 {
 public:
-	shared_ptr<FloatModel> m_spike = nullptr;
-	float m_spike_fb = 4.0f;
-	HPNoise(shared_ptr<HPNoiseModel> model) {
-		if (model != nullptr) {
-			m_spike = model->m_spike;
-		}
-	}
+	HPNoise(shared_ptr<HPNoiseModel> model) :
+			m_spike(model->m_spike)
+	{}
 	float processFrame(float freq, float srate) {
-		float spike = m_spike != nullptr ? m_spike->value() : m_spike_fb;
-		float makeupAmp = 0.5f + 0.33f * spike;
+		float makeupAmp = 0.5f + 0.33f * m_spike->value();
 		float osc = 0.0f;
 		int number = 0;
 		if (m_prev != nullptr) {
@@ -74,7 +69,7 @@ public:
 		if (number > 0) {
 			osc /= number;
 			osc = (osc + 1.0f) / 2.0f; //0.0...1.0
-			osc = powf(osc, spike);
+			osc = powf(osc, m_spike->value());
 		}
 		else {
 			makeupAmp = 0.5f;
@@ -83,6 +78,8 @@ public:
 		float r = 1.0f - fastRandf(2.0f);
 		return makeupAmp * osc * r;
 	}
+private:
+	shared_ptr<FloatModel> m_spike;
 };
 
 inline unique_ptr<HPNode> instantiateNoise(shared_ptr<HPModel::Node> self) {

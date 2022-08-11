@@ -51,25 +51,21 @@ struct HPSineModel : public HPModel::Node {
 class HPSine : public HPOsc
 {
 public:
-	HPSine(shared_ptr<HPSineModel> model) {
-		if (model != nullptr) {
-			m_sawify = model->m_sawify;
-		}
-	}
-	shared_ptr<FloatModel> m_sawify = nullptr;
-	float m_sawify_fb = 0.0f; //fallback if no model
+	HPSine(shared_ptr<HPSineModel> model) :
+			m_sawify(model->m_sawify)
+	{}
 private:
 	float shape(float ph) {
 		if (ph < 0.5f) {
 			//this helps with FM detuning when using a "sawified" argument
 			return -shape(1.0f - ph);
 		}
-		float sawify = m_sawify != nullptr ? m_sawify->value() : m_sawify_fb;
 		float s = sinf(ph * F_2PI);
 		float saw = ph; //simplified and reversed
-		saw = 1.0f - sawify * saw; //ready for multiplication with s
+		saw = 1.0f - m_sawify->value() * saw; //ready for multiplication with s
 		return saw * s;
 	}
+	shared_ptr<FloatModel> m_sawify;
 };
 
 inline unique_ptr<HPNode> instantiateSine(shared_ptr<HPModel::Node> self) {

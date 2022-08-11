@@ -124,24 +124,15 @@ inline float tri2sqr(float ph, float morph)
 class HPShapes : public HPOsc
 {
 public:
-	HPShapes(shared_ptr<HPShapesModel> model) {
-		if (model != nullptr) {
-			m_shape = model->m_shape;
-			m_jitter = model->m_jitter;
-		}
-	}
-	shared_ptr<FloatModel> m_shape = nullptr;
-	float m_shape_fb = 0.0f;
-	shared_ptr<FloatModel> m_jitter = nullptr;
-	float m_jitter_fb = 0.0f;
-	float m_jitterState = 0.0f;
+	HPShapes(shared_ptr<HPShapesModel> model) :
+			m_shape(model->m_shape),
+			m_jitter(model->m_jitter)
+	{}
 private:
 	float shape(float ph) {
-		float shape = m_shape != nullptr ? m_shape->value() : m_shape_fb;
-		float jitter = m_jitter != nullptr ? m_jitter->value() : m_jitter_fb;
 		//continuously add to the jittering
-		m_jitterState = (127.0f * m_jitterState + fastRandf(jitter)) / 128.0f;
-		float finalShape = shape + m_jitterState - 0.5f * jitter;
+		m_jitterState = (127.0f * m_jitterState + fastRandf(m_jitter->value())) / 128.0f;
+		float finalShape = m_shape->value() + m_jitterState - 0.5f * m_jitter->value();
 		while (finalShape < 0.0f) { finalShape += 3.0f; }
 		while (finalShape >= 3.0f) { finalShape -= 3.0f; }
 		float morph = fraction(finalShape);
@@ -158,6 +149,9 @@ private:
 		float amp = 0.3f + 0.1f * morph;
 		return amp * sqr2saw(ph, morph);
 	}
+	shared_ptr<FloatModel> m_shape;
+	shared_ptr<FloatModel> m_jitter;
+	float m_jitterState = 0.0f;
 };
 
 inline unique_ptr<HPNode> instantiateShapes(shared_ptr<HPModel::Node> self) {

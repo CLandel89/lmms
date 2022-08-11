@@ -47,13 +47,9 @@ struct HPFmModel : public HPModel::Node {
 class HPFm : public HPNode
 {
 public:
-	HPFm(shared_ptr<HPFmModel> model) {
-		if (model != nullptr) {
-			m_amp = model->m_amp;
-		}
-	}
-	shared_ptr<FloatModel> m_amp = nullptr;
-	float m_amp_fb = 1.0f; //fallback if no model
+	HPFm(shared_ptr<HPFmModel> model) :
+			m_amp(model->m_amp)
+	{}
 private:
 	float processFrame(float freq, float srate) {
 		if (m_prev == nullptr) {
@@ -63,11 +59,11 @@ private:
 		for (auto &argument : m_arguments) {
 			mod += argument->processFrame(freq, srate);
 		}
-		float amp = m_amp != nullptr ? m_amp->value() : m_amp_fb;
-		mod *= amp;
+		mod *= m_amp->value();
 		float prevFreq = (mod + 1.0f) * freq;
 		return m_prev->processFrame(prevFreq, srate);
 	}
+	shared_ptr<FloatModel> m_amp;
 };
 
 inline unique_ptr<HPNode> instantiateFm(shared_ptr<HPModel::Node> self) {
