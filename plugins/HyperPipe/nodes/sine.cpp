@@ -44,8 +44,14 @@ struct HPSineModel : public HPModel::Node {
 	string name() {
 		return SINE_NAME;
 	}
-	void load(string params) {}
-	string save() { return ""; }
+	void load(int model_i, const QDomElement& elem) {
+		QString is = "n" + QString::number(model_i);
+		m_sawify->loadSettings(elem, is + "_sawify");
+	}
+	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
+		QString is = "n" + QString::number(model_i);
+		m_sawify->saveSettings(doc, elem, is + "_sawify");
+	}
 };
 
 class HPSine : public HPOsc

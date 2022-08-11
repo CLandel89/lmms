@@ -71,6 +71,9 @@ void HPModel::remove(int model_i) {
 int HPModel::size() {
 	return m_nodes.size();
 }
+shared_ptr<IntModel> HPModel::newArgument(Instrument* instrument, int i) {
+	return make_shared<IntModel>(0, 0, 99, instrument, QString("argument" + i));
+}
 
 HPModel::Node::Node(Instrument* instrument) :
 		m_pipe(make_shared<IntModel>(0, 0, 99, instrument, QString("pipe")))

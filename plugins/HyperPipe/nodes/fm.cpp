@@ -40,8 +40,14 @@ struct HPFmModel : public HPModel::Node {
 	shared_ptr<FloatModel> m_amp;
 	unique_ptr<HPNode> instantiate(shared_ptr<HPModel::Node> self) { return instantiateFm(self); }
 	string name() { return FM_NAME; }
-	void load(string params) {}
-	string save() { return ""; }
+	void load(int model_i, const QDomElement& elem) {
+		QString is = "n" + QString::number(model_i);
+		m_amp->loadSettings(elem, is + "_amp");
+	}
+	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
+		QString is = "n" + QString::number(model_i);
+		m_amp->saveSettings(doc, elem, is + "_amp");
+	}
 };
 
 class HPFm : public HPNode

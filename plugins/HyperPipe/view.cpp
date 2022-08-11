@@ -276,7 +276,7 @@ void HPVArguments::sl_add() {
 	if (m_model == nullptr) { return; }
 	const auto ai = m_model->m_arguments.size();
 	m_model->m_arguments.emplace_back(
-		make_shared<IntModel>(0, 0, 99, m_instrument, tr("argument" + ai))
+		HPModel::newArgument(m_instrument, ai)
 	);
 	m_pos++;
 	update();

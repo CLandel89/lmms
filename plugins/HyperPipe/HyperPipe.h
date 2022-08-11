@@ -75,14 +75,15 @@ public:
 		//! "Argument" pipes which mix with or modulate the "current" pipe.
 		vector<shared_ptr<IntModel>> m_arguments;
 		virtual string name() = 0;
-		virtual void load(string params) = 0;
-		virtual string save() = 0;
+		virtual void load(int model_i, const QDomElement& elem) = 0;
+		virtual void save(int model_i, QDomDocument& doc, QDomElement& elem) = 0;
 	};
 	vector<shared_ptr<Node>> m_nodes;
 	void prepend(shared_ptr<Node> node, int model_i);
 	void append(shared_ptr<Node> node, int model_i);
 	void remove(int model_i);
 	int size();
+	static shared_ptr<IntModel> newArgument(Instrument* instrument, int i);
 };
 
 /**
@@ -136,8 +137,8 @@ public:
 	void chNodeType(string nodeType, int model_i);
 	void playNote(NotePlayHandle* nph, sampleFrame* working_buffer) override;
 	void deleteNotePluginData(NotePlayHandle* nph) override;
-	void saveSettings(QDomDocument& doc, QDomElement& parent) override;
-	void loadSettings(const QDomElement& preset) override;
+	void saveSettings(QDomDocument& doc, QDomElement& elem) override;
+	void loadSettings(const QDomElement& elem) override;
 	QString nodeName() const override;
 	gui::PluginView* instantiateView(QWidget* parent) override;
 	map<string, unique_ptr<HPDefinitionBase>> m_definitions;
@@ -229,7 +230,7 @@ namespace lmms::hyperpipe {
 	This ensures that most of the code for a specific node type can be gathered in one place.
 	Each supported node type is represented by an instance (in every instance of HPInstrument).
 	The "definition" then provides one view object, and any number of node model instances, which (each):
-	 - can save/load its (individual) parameters into/from a std::string (no newlines allowed!)
+	 - can save/load its individual parameters
 	 - and in turn instantiate any number of synths.
 */
 class HPDefinitionBase {
@@ -280,5 +281,18 @@ inline float sstep(float a) {
 	// -cos: -1.0...1.0
 	// -cos + 1.0: 0.0...2.0
 	return (-cosf(a * F_PI) + 1.0f) / 2.0f;
+}
+//! A simple hasher for mapping names to numbers.
+/** Only 16-bit because the *.xpf files will contain exponential notation otherwise. */
+inline int16_t hphash(string name) {
+	// basically https://dev.to/muiz6/string-hashing-in-c-1np3
+	static const int PRIME_CONST = 31;
+	int16_t result = 0;
+	int16_t primePower = 1;
+	for (char c : name) {
+		result += c * primePower;
+		primePower *= PRIME_CONST;
+	}
+	return result;
 }
 }

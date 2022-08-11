@@ -47,8 +47,16 @@ struct HPShapesModel : public HPModel::Node {
 	string name() {
 		return SHAPES_NAME;
 	}
-	void load(string params) {}
-	string save() { return ""; }
+	void load(int model_i, const QDomElement& elem) {
+		QString is = "n" + QString::number(model_i);
+		m_shape->loadSettings(elem, is + "_shape");
+		m_jitter->loadSettings(elem, is + "_jitter");
+	}
+	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
+		QString is = "n" + QString::number(model_i);
+		m_shape->saveSettings(doc, elem, is + "_shape");
+		m_jitter->saveSettings(doc, elem, is + "_jitter");
+	}
 };
 
 inline float saw2tri(float ph, float morph)

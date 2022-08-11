@@ -44,8 +44,14 @@ struct HPNoiseModel : public HPModel::Node {
 	string name() {
 		return NOISE_NAME;
 	}
-	void load(string params) {}
-	string save() { return ""; }
+	void load(int model_i, const QDomElement& elem) {
+		QString is = "n" + QString::number(model_i);
+		m_spike->loadSettings(elem, is + "_spike");
+	}
+	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
+		QString is = "n" + QString::number(model_i);
+		m_spike->saveSettings(doc, elem, is + "_spike");
+	}
 };
 
 class HPNoise : public HPNode
