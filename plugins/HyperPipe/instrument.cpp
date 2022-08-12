@@ -99,9 +99,9 @@ void HPInstrument::deleteNotePluginData(NotePlayHandle* nph) {
 }
 
 void HPInstrument::saveSettings(QDomDocument& doc, QDomElement& elem) {
-	IntModel size(m_model.size(), 0, 9999);
+	IntModel size(m_model.m_nodes.size(), 0, 9999);
 	size.saveSettings(doc, elem, "size");
-	for (int i = 0; i < m_model.size(); i++) {
+	for (int i = 0; i < m_model.m_nodes.size(); i++) {
 		QString is = "n" + QString::number(i);
 		auto& node = m_model.m_nodes[i];
 		node->m_pipe->saveSettings(doc, elem, is + "_pipe");

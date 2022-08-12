@@ -79,10 +79,6 @@ public:
 		virtual void save(int model_i, QDomDocument& doc, QDomElement& elem) = 0;
 	};
 	vector<shared_ptr<Node>> m_nodes;
-	void prepend(shared_ptr<Node> node, int model_i);
-	void append(shared_ptr<Node> node, int model_i);
-	void remove(int model_i);
-	int size();
 	static shared_ptr<IntModel> newArgument(Instrument* instrument, int i);
 };
 

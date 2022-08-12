@@ -141,7 +141,7 @@ void HPView::sl_prev() {
 
 void HPView::sl_next() {
 	if (m_destructing) { return; }
-	if (m_model_i >= m_instrument->m_model.size() - 1) { return; }
+	if (m_model_i >= m_instrument->m_model.m_nodes.size() - 1) { return; }
 	m_model_i++;
 	updateNodeView();
 }
@@ -158,30 +158,33 @@ void HPView::sl_moveUp() {
 void HPView::sl_prepend() {
 	if (m_destructing) { return; }
 	auto mnode = m_instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode();
-	m_instrument->m_model.prepend(mnode, m_model_i);
+	auto &nodes = m_instrument->m_model.m_nodes;
+	nodes.insert(nodes.begin() + m_model_i, mnode);
 	updateNodeView();
 }
 
 void HPView::sl_delete() {
 	if (m_destructing) { return; }
-	if (m_instrument->m_model.size() <= 1) { return; }
-	m_instrument->m_model.remove(m_model_i);
-	if (m_model_i >= m_instrument->m_model.size()) { m_model_i--; }
+	auto &nodes = m_instrument->m_model.m_nodes;
+	if (nodes.size() <= 1) { return; }
+	nodes.erase(nodes.begin() + m_model_i);
+	if (m_model_i >= nodes.size()) { m_model_i--; }
 	updateNodeView();
 }
 
 void HPView::sl_append() {
 	if (m_destructing) { return; }
 	auto mnode = m_instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode();
-	m_instrument->m_model.append(mnode, m_model_i);
+	auto &nodes = m_instrument->m_model.m_nodes;
+	nodes.insert(nodes.begin() + m_model_i + 1, mnode);
 	m_model_i++;
 	updateNodeView();
 }
 
 void HPView::sl_moveDown() {
 	if (m_destructing) { return; }
-	if (m_model_i >= m_instrument->m_model.size() - 1) { return; }
 	auto &nodes = m_instrument->m_model.m_nodes;
+	if (m_model_i >= nodes.size() - 1) { return; }
 	swap(nodes[m_model_i], nodes[m_model_i + 1]);
 	m_model_i++;
 	updateNodeView();

@@ -82,8 +82,8 @@ HPSynth::HPSynth(HPInstrument* instrument, NotePlayHandle* nph, HPModel* model) 
 		}
 		return result;
 	};
-	if (model->size() > 0) {
-		m_lastNode = instantiate(model->size() - 1);
+	if (model->m_nodes.size() > 0) {
+		m_lastNode = instantiate(model->m_nodes.size() - 1);
 	}
 }
 
