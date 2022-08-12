@@ -28,6 +28,11 @@
 namespace lmms::hyperpipe
 {
 
+HPOsc::HPOsc(HPModel* model, int model_i) :
+		m_prev(model->instantiatePrev(model_i)),
+		m_arguments(model->instantiateArguments(model_i))
+{}
+
 float HPOsc::processFrame(float freq, float srate) {
 	m_ph += freq / srate;
 	while (m_ph >= 1.0f) { m_ph -= 1.0f; }
@@ -49,41 +54,9 @@ HPSynth::HPSynth(HPInstrument* instrument, NotePlayHandle* nph, HPModel* model) 
 		m_instrument(instrument),
 		m_nph(nph)
 {
-	// Create synth nodes by recursing this:
-	function<unique_ptr<HPNode>(int)> instantiate = [&model, &instantiate] (int i)
-	{
-		auto mnode = model->m_nodes[i];
-		auto result = mnode->instantiate(mnode);
-		unique_ptr<HPNode> prev = nullptr;
-		vector<unique_ptr<HPNode>> arguments(mnode->m_arguments.size());
-		//crawl upwards in the model (i.e., decrement j) and instantiate prev and arguments at first encounters
-		for (int j = i - 1; j >= 0; j--) {
-			auto mnode_j = model->m_nodes[j];
-			if (prev == nullptr &&
-					mnode->m_pipe->value() == mnode_j->m_pipe->value())
-			{
-				prev = instantiate(j);
-			}
-			for (int ai = 0; ai < mnode->m_arguments.size(); ai++) {
-				if (arguments[ai] == nullptr &&
-						mnode->m_arguments[ai]->value() == mnode_j->m_pipe->value())
-				{
-					arguments[ai] = instantiate(j);
-				}
-			}
-		}
-		if (prev != nullptr) {
-			result->m_prev = move(prev);
-		}
-		for (auto& argument : arguments) {
-			if (argument != nullptr) {
-				result->m_arguments.emplace_back(move(argument));
-			}
-		}
-		return result;
-	};
-	if (model->m_nodes.size() > 0) {
-		m_lastNode = instantiate(model->m_nodes.size() - 1);
+	auto &nodes = model->m_nodes;
+	if (nodes.size() > 0) {
+		m_lastNode = nodes.back()->instantiate(model, nodes.size() - 1);
 	}
 }
 

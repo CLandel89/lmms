@@ -70,7 +70,11 @@ public:
 		Node(Instrument* instrument);
 		virtual ~Node() = default;
 		//! Calls the synth node constructor that corresponds to the derived model struct.
-		virtual unique_ptr<HPNode> instantiate(shared_ptr<Node> self) = 0;
+		/**
+			Will recurse into the "instantiate" methods of its "previous" node and
+			"arguments"; may do so multiple times (e.g., "organify").
+		*/
+		virtual unique_ptr<HPNode> instantiate(HPModel* model, int model_i) = 0;
 		shared_ptr<IntModel> m_pipe;
 		//! "Argument" pipes which mix with or modulate the "current" pipe.
 		vector<shared_ptr<IntModel>> m_arguments;
@@ -78,8 +82,12 @@ public:
 		virtual void load(int model_i, const QDomElement& elem) = 0;
 		virtual void save(int model_i, QDomDocument& doc, QDomElement& elem) = 0;
 	};
-	vector<shared_ptr<Node>> m_nodes;
+	//! Instantiates the "previous" node; if there is none, returns nullptr.
+	unique_ptr<HPNode> instantiatePrev(int i);
+	//! Instantiates the "argument" nodes; may be smaller than node->m_arguments, but never contains nullptr.
+	vector<unique_ptr<HPNode>> instantiateArguments(int i);
 	static shared_ptr<IntModel> newArgument(Instrument* instrument, int i);
+	vector<shared_ptr<Node>> m_nodes;
 };
 
 /**
@@ -90,18 +98,17 @@ class HPNode
 public:
 	virtual ~HPNode() = default;
 	virtual float processFrame(float freq, float srate) = 0;
-	//! Previous node with same pipe № which HPSynth puts here.
-	unique_ptr<HPNode> m_prev = nullptr;
-	//! "Argument" nodes which HPSynth puts here.
-	vector<unique_ptr<HPNode>> m_arguments;
 };
 
 class HPOsc : public HPNode
 {
 public:
+	HPOsc(HPModel* model, int model_i);
 	virtual ~HPOsc() = default;
 	float processFrame(float freq, float srate);
 private:
+	unique_ptr<HPNode> m_prev;
+	vector<unique_ptr<HPNode>> m_arguments;
 	virtual float shape(float ph) = 0;
 	float m_ph = 0.0f;
 };
@@ -110,7 +117,7 @@ class HPInstrument;
 
 /**
 	Every note played by HP is represented by an instance of this class.
-	Creates and deletes HPNode instances.
+	Root of HPNode instance creation.
 */
 class HPSynth
 {
@@ -261,6 +268,7 @@ private:
 // The types for M are:
 struct HPFmModel;
 struct HPNoiseModel;
+struct HPOrganifyModel;
 struct HPShapesModel;
 struct HPSineModel;
 

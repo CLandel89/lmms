@@ -31,7 +31,7 @@ namespace lmms::hyperpipe
 const string SHAPES_NAME = "shapes";
 const string HPDefinitionBase::DEFAULT_TYPE = SHAPES_NAME;
 
-inline unique_ptr<HPNode> instantiateShapes(shared_ptr<HPModel::Node> self);
+inline unique_ptr<HPNode> instantiateShapes(HPModel* model, int model_i);
 
 struct HPShapesModel : public HPModel::Node {
 	HPShapesModel(Instrument* instrument) :
@@ -41,8 +41,8 @@ struct HPShapesModel : public HPModel::Node {
 	{}
 	shared_ptr<FloatModel> m_shape;
 	shared_ptr<FloatModel> m_jitter;
-	unique_ptr<HPNode> instantiate(shared_ptr<Node> self) {
-		return instantiateShapes(self);
+	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
+		return instantiateShapes(model, model_i);
 	}
 	string name() {
 		return SHAPES_NAME;
@@ -132,9 +132,10 @@ inline float tri2sqr(float ph, float morph)
 class HPShapes : public HPOsc
 {
 public:
-	HPShapes(shared_ptr<HPShapesModel> model) :
-			m_shape(model->m_shape),
-			m_jitter(model->m_jitter)
+	HPShapes(HPModel* model, int model_i, shared_ptr<HPShapesModel> nmodel) :
+			HPOsc(model, model_i),
+			m_shape(nmodel->m_shape),
+			m_jitter(nmodel->m_jitter)
 	{}
 private:
 	float shape(float ph) {
@@ -162,9 +163,11 @@ private:
 	float m_jitterState = 0.0f;
 };
 
-inline unique_ptr<HPNode> instantiateShapes(shared_ptr<HPModel::Node> self) {
+inline unique_ptr<HPNode> instantiateShapes(HPModel* model, int model_i) {
 	return make_unique<HPShapes>(
-		static_pointer_cast<HPShapesModel>(self)
+		model,
+		model_i,
+		static_pointer_cast<HPShapesModel>(model->m_nodes[model_i])
 	);
 }
 

@@ -30,7 +30,7 @@ namespace lmms::hyperpipe
 
 const string SINE_NAME = "sine";
 
-inline unique_ptr<HPNode> instantiateSine(shared_ptr<HPModel::Node> self);
+inline unique_ptr<HPNode> instantiateSine(HPModel* model, int model_i);
 
 struct HPSineModel : public HPModel::Node {
 	HPSineModel(Instrument* instrument) :
@@ -38,8 +38,8 @@ struct HPSineModel : public HPModel::Node {
 			m_sawify(make_shared<FloatModel>(0.0f, 0.0f, 1.0f, 0.01f, instrument, QString("sawify")))
 	{}
 	shared_ptr<FloatModel> m_sawify;
-	unique_ptr<HPNode> instantiate(shared_ptr<HPModel::Node> self) {
-		return instantiateSine(self);
+	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
+		return instantiateSine(model, model_i);
 	}
 	string name() {
 		return SINE_NAME;
@@ -57,8 +57,9 @@ struct HPSineModel : public HPModel::Node {
 class HPSine : public HPOsc
 {
 public:
-	HPSine(shared_ptr<HPSineModel> model) :
-			m_sawify(model->m_sawify)
+	HPSine(HPModel* model, int model_i, shared_ptr<HPSineModel> nmodel) :
+			HPOsc(model, model_i),
+			m_sawify(nmodel->m_sawify)
 	{}
 private:
 	float shape(float ph) {
@@ -74,9 +75,11 @@ private:
 	shared_ptr<FloatModel> m_sawify;
 };
 
-inline unique_ptr<HPNode> instantiateSine(shared_ptr<HPModel::Node> self) {
+inline unique_ptr<HPNode> instantiateSine(HPModel* model, int model_i) {
 	return make_unique<HPSine>(
-		static_pointer_cast<HPSineModel>(self)
+		model,
+		model_i,
+		static_pointer_cast<HPSineModel>(model->m_nodes[model_i])
 	);
 }
 

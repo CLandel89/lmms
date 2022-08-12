@@ -30,7 +30,7 @@ namespace lmms::hyperpipe
 
 const string NOISE_NAME = "noise";
 
-inline unique_ptr<HPNode> instantiateNoise(shared_ptr<HPModel::Node> self);
+inline unique_ptr<HPNode> instantiateNoise(HPModel* model, int model_i);
 
 struct HPNoiseModel : public HPModel::Node {
 	HPNoiseModel(Instrument* instrument) :
@@ -38,8 +38,8 @@ struct HPNoiseModel : public HPModel::Node {
 			m_spike(make_shared<FloatModel>(4.0f, 0.0f, 20.0f, 0.1f, instrument, QString("spike")))
 	{}
 	shared_ptr<FloatModel> m_spike;
-	unique_ptr<HPNode> instantiate(shared_ptr<HPModel::Node> self) {
-		return instantiateNoise(self);
+	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
+		return instantiateNoise(model, model_i);
 	}
 	string name() {
 		return NOISE_NAME;
@@ -57,8 +57,10 @@ struct HPNoiseModel : public HPModel::Node {
 class HPNoise : public HPNode
 {
 public:
-	HPNoise(shared_ptr<HPNoiseModel> model) :
-			m_spike(model->m_spike)
+	HPNoise(HPModel* model, int model_i, shared_ptr<HPNoiseModel> nmodel) :
+			m_spike(nmodel->m_spike),
+			m_prev(model->instantiatePrev(model_i)),
+			m_arguments(model->instantiateArguments(model_i))
 	{}
 	float processFrame(float freq, float srate) {
 		float makeupAmp = 0.5f + 0.33f * m_spike->value();
@@ -86,11 +88,15 @@ public:
 	}
 private:
 	shared_ptr<FloatModel> m_spike;
+	unique_ptr<HPNode> m_prev;
+	vector<unique_ptr<HPNode>> m_arguments;
 };
 
-inline unique_ptr<HPNode> instantiateNoise(shared_ptr<HPModel::Node> self) {
+inline unique_ptr<HPNode> instantiateNoise(HPModel* model, int model_i) {
 	return make_unique<HPNoise>(
-		static_pointer_cast<HPNoiseModel>(self)
+		model,
+		model_i,
+		static_pointer_cast<HPNoiseModel>(model->m_nodes[model_i])
 	);
 }
 

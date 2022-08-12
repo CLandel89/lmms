@@ -34,6 +34,42 @@ HPModel::HPModel(HPInstrument* instrument) {
 	);
 }
 
+unique_ptr<HPNode> HPModel::instantiatePrev(int i) {
+	// the "current" node looks backwards for any "previous" node
+	for (int j = i - 1; j >= 0; j--) {
+		if (m_nodes[i]->m_pipe->value() == m_nodes[j]->m_pipe->value()) {
+			return m_nodes[j]->instantiate(this, j);
+		}
+	}
+	return nullptr;
+}
+
+vector<unique_ptr<HPNode>> HPModel::instantiateArguments(int i)
+{
+	// we need to track which arguments are valid and which must be left out
+	vector<unique_ptr<HPNode>> result;
+	for (int n = 0; n < m_nodes[i]->m_arguments.size(); n++) {
+		result.emplace_back(nullptr);
+	}
+	// the "current" node looks backwards for any associated arguments
+	for (int j = i - 1; j >= 0; j--) {
+		for (int ai = 0; ai < m_nodes[i]->m_arguments.size(); ai++) {
+			if (result[ai] == nullptr && // only set at first encounter
+					m_nodes[i]->m_arguments[ai]->value() == m_nodes[j]->m_pipe->value())
+			{
+				result[ai] = m_nodes[j]->instantiate(this, j);
+			}
+		}
+	}
+	// clean up, also going backwards
+	for (int ai = result.size() - 1; ai >= 0; ai--) {
+		if (result[ai] == nullptr) {
+			result.erase(result.begin() + ai);
+		}
+	}
+	return result;
+}
+
 shared_ptr<IntModel> HPModel::newArgument(Instrument* instrument, int i) {
 	return make_shared<IntModel>(0, 0, 99, instrument, QString("argument" + i));
 }

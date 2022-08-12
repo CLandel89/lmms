@@ -30,7 +30,7 @@ namespace lmms::hyperpipe
 
 const string FM_NAME = "fm";
 
-inline unique_ptr<HPNode> instantiateFm(shared_ptr<HPModel::Node> self);
+inline unique_ptr<HPNode> instantiateFm(HPModel* model, int model_i);
 
 struct HPFmModel : public HPModel::Node {
 	HPFmModel(Instrument* instrument) :
@@ -38,7 +38,9 @@ struct HPFmModel : public HPModel::Node {
 			m_amp(make_shared<FloatModel>(1.0f, 0.0f, 50.0f, 0.1f, instrument, QString("FM amp")))
 	{}
 	shared_ptr<FloatModel> m_amp;
-	unique_ptr<HPNode> instantiate(shared_ptr<HPModel::Node> self) { return instantiateFm(self); }
+	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
+		return instantiateFm(model, model_i);
+	}
 	string name() { return FM_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
@@ -53,8 +55,10 @@ struct HPFmModel : public HPModel::Node {
 class HPFm : public HPNode
 {
 public:
-	HPFm(shared_ptr<HPFmModel> model) :
-			m_amp(model->m_amp)
+	HPFm(HPModel* model, int model_i, shared_ptr<HPFmModel> nmodel) :
+			m_amp(nmodel->m_amp),
+			m_prev(model->instantiatePrev(model_i)),
+			m_arguments(model->instantiateArguments(model_i))
 	{}
 private:
 	float processFrame(float freq, float srate) {
@@ -70,11 +74,15 @@ private:
 		return m_prev->processFrame(prevFreq, srate);
 	}
 	shared_ptr<FloatModel> m_amp;
+	unique_ptr<HPNode> m_prev;
+	vector<unique_ptr<HPNode>> m_arguments;
 };
 
-inline unique_ptr<HPNode> instantiateFm(shared_ptr<HPModel::Node> self) {
+inline unique_ptr<HPNode> instantiateFm(HPModel* model, int model_i) {
 	return make_unique<HPFm>(
-		static_pointer_cast<HPFmModel>(self)
+		model,
+		model_i,
+		static_pointer_cast<HPFmModel>(model->m_nodes[model_i])
 	);
 }
 
