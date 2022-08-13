@@ -176,4 +176,6 @@ HPDefinitionBase::HPDefinitionBase(HPInstrument* instrument) :
 	m_instrument(instrument)
 {}
 
+bool HPDefinitionBase::forbidsArguments() { return m_forbidsArguments; }
+
 } // namespace lmms::hyperpipe

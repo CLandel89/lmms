@@ -240,12 +240,14 @@ class HPDefinitionBase {
 public:
 	HPDefinitionBase(HPInstrument* instrument);
 	virtual ~HPDefinitionBase() = default;
+	bool forbidsArguments();
 	virtual string name() = 0;
 	virtual shared_ptr<HPModel::Node> newNode() = 0;
 	virtual unique_ptr<HPNodeView> instantiateView(HPView* hpview) = 0;
 	static const string DEFAULT_TYPE;
 protected:
 	HPInstrument *m_instrument;
+	bool m_forbidsArguments = false;
 };
 
 template<class M>

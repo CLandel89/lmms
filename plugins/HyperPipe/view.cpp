@@ -277,6 +277,7 @@ void HPVArguments::sl_right() {
 void HPVArguments::sl_add() {
 	if (m_destructing) { return; }
 	if (m_model == nullptr) { return; }
+	if (m_instrument->m_definitions[m_model->name()]->forbidsArguments()) { return; }
 	const auto ai = m_model->m_arguments.size();
 	m_model->m_arguments.emplace_back(
 		HPModel::newArgument(m_instrument, ai)

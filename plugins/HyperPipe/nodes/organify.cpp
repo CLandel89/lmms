@@ -65,68 +65,36 @@ public:
 	{
 		for (int t = 0; t < m_tones + 1 + m_tones; t++) {
 			m_prev.emplace_back(model->instantiatePrev(model_i));
-			m_arguments.emplace_back(model->instantiateArguments(model_i));
 		}
 	}
 private:
 	float processFrame(float freq, float srate) {
-		int inputNumber = m_prev[0] != nullptr ? 1 : 0;
-		if (! m_arguments.empty()) {
-			inputNumber += m_arguments[0].size();
-		}
-		if (inputNumber == 0) {
+		if (m_prev[0] == nullptr) {
 			return 0.0f;
 		}
 		float sumWeights = 0.0f;
 		float result = 0.0f;
-		// "current pipe"
-		if (m_prev[0] != nullptr) {
-			for (int sub = 0; sub < m_tones; sub++) {
-				float r = 2.0f / (3.0f + float(sub));
-				float w = 1.0f - float(sub + 1) / (m_tones + 1);
-				w = powf(w, m_weaken->value());
-				sumWeights += w;
-				result += w * m_prev[sub]->processFrame(r * freq, srate);
-			}
-			sumWeights += 1.0f;
-			result += m_prev[m_tones]->processFrame(freq, srate);
-			for (int over = 0; over < m_tones; over++) {
-				float r = (3.0f + float(over)) / 2.0f;
-				float w = 1.0f - float(over + 1) / (m_tones + 1);
-				w = powf(w, m_weaken->value());
-				sumWeights += w;
-				result += w * m_prev[m_tones + 1 + over]->processFrame(r * freq, srate);
-			}
-		}
-		// "argument pipes"
 		for (int sub = 0; sub < m_tones; sub++) {
 			float r = 2.0f / (3.0f + float(sub));
 			float w = 1.0f - float(sub + 1) / (m_tones + 1);
 			w = powf(w, m_weaken->value());
-			for (auto &argument : m_arguments[sub]) {
-				sumWeights += w;
-				result += w * argument->processFrame(r * freq, srate);
-			}
+			sumWeights += w;
+			result += w * m_prev[sub]->processFrame(r * freq, srate);
 		}
-		for (auto &argument : m_arguments[m_tones]) {
-			sumWeights += 1.0f;
-			result += argument->processFrame(freq, srate);
-		}
+		sumWeights += 1.0f;
+		result += m_prev[m_tones]->processFrame(freq, srate);
 		for (int over = 0; over < m_tones; over++) {
 			float r = (3.0f + float(over)) / 2.0f;
 			float w = 1.0f - float(over + 1) / (m_tones + 1);
 			w = powf(w, m_weaken->value());
-			for (auto &argument : m_arguments[m_tones + 1 + over]) {
-				sumWeights += w;
-				result += w * argument->processFrame(r * freq, srate);
-			}
+			sumWeights += w;
+			result += w * m_prev[m_tones + 1 + over]->processFrame(r * freq, srate);
 		}
 		return result / sumWeights;
 	}
 	int m_tones;
 	shared_ptr<FloatModel> m_weaken;
 	vector<unique_ptr<HPNode>> m_prev;
-	vector<vector<unique_ptr<HPNode>>> m_arguments;
 };
 
 inline unique_ptr<HPNode> instantiateOrganify(HPModel* model, int model_i) {
@@ -161,7 +129,9 @@ using Definition = HPDefinition<HPOrganifyModel>;
 
 template<> Definition::HPDefinition(HPInstrument* instrument) :
 		HPDefinitionBase(instrument)
-{}
+{
+		m_forbidsArguments = true;
+}
 
 template<> Definition::~HPDefinition() = default;
 
