@@ -36,7 +36,7 @@ struct HPOrganifyModel : public HPModel::Node {
 	HPOrganifyModel(Instrument* instrument) :
 			Node(instrument),
 			m_tones(make_shared<IntModel>(1, 1, 9, instrument, QString("tones"))),
-			m_weaken(make_shared<FloatModel>(1.0f, 0.0f, 10.0f, 0.1f, instrument, QString("weaken")))
+			m_weaken(make_shared<FloatModel>(1.0f, -5.0f, 10.0f, 0.1f, instrument, QString("weaken")))
 	{}
 	shared_ptr<IntModel> m_tones;
 	shared_ptr<FloatModel> m_weaken;
@@ -61,10 +61,11 @@ class HPOrganify : public HPNode
 public:
 	HPOrganify(HPModel* model, int model_i, shared_ptr<HPOrganifyModel> nmodel) :
 			m_tones(nmodel->m_tones->value()),
-			m_weaken(nmodel->m_weaken)
+			m_weaken(nmodel->m_weaken),
+			m_prev(m_tones + 1 + m_tones)
 	{
 		for (int t = 0; t < m_tones + 1 + m_tones; t++) {
-			m_prev.emplace_back(model->instantiatePrev(model_i));
+			m_prev[t] = model->instantiatePrev(model_i);
 		}
 	}
 private:
