@@ -268,11 +268,18 @@ private:
 };
 
 // The types for M are:
+struct HPAmModel;
+struct HPAmpModel;
+struct HPEnvModel;
 struct HPFmModel;
+struct HPLfoModel;
+struct HPMixModel;
 struct HPNoiseModel;
 struct HPOrganifyModel;
+struct HPOverdriveModel;
 struct HPShapesModel;
 struct HPSineModel;
+struct HPTuneModel;
 
 }
 

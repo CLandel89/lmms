@@ -56,11 +56,18 @@ inline void createDefinition(
 
 map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument* instrument) {
 	map<string, unique_ptr<HPDefinitionBase>> definitions;
+	createDefinition<HPAmModel>(definitions, instrument);
+	createDefinition<HPAmpModel>(definitions, instrument);
+	createDefinition<HPEnvModel>(definitions, instrument);
 	createDefinition<HPFmModel>(definitions, instrument);
+	createDefinition<HPLfoModel>(definitions, instrument);
+	createDefinition<HPMixModel>(definitions, instrument);
 	createDefinition<HPNoiseModel>(definitions, instrument);
 	createDefinition<HPOrganifyModel>(definitions, instrument);
+	createDefinition<HPOverdriveModel>(definitions, instrument);
 	createDefinition<HPShapesModel>(definitions, instrument);
 	createDefinition<HPSineModel>(definitions, instrument);
+	createDefinition<HPTuneModel>(definitions, instrument);
 	return definitions;
 }
 
