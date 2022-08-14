@@ -53,8 +53,6 @@ using namespace lmms::gui::hyperpipe;
 namespace lmms::hyperpipe
 {
 
-const string HP_DEFAULT_NODE_TYPE;
-
 class HPInstrument;
 class HPNode;
 

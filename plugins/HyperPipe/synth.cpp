@@ -29,25 +29,24 @@ namespace lmms::hyperpipe
 {
 
 HPOsc::HPOsc(HPModel* model, int model_i) :
-		m_prev(model->instantiatePrev(model_i)),
 		m_arguments(model->instantiateArguments(model_i))
 {}
 
 float HPOsc::processFrame(float freq, float srate) {
-	m_ph += freq / srate;
-	while (m_ph >= 1.0f) { m_ph -= 1.0f; }
-	while (m_ph < 0.0f) { m_ph += 1.0f; }
 	float result = shape(m_ph);
-	int number = 1;
-	if (m_prev != nullptr) {
-		result += m_prev->processFrame(freq, srate);
-		number++;
+	if (m_arguments.empty()) {
+		m_ph += freq / srate;
 	}
-	for (auto& argument : m_arguments) {
-		result += argument->processFrame(freq, srate);
-		number++;
+	else {
+		m_ph = 0;
+		for (auto &argument : m_arguments) {
+			m_ph += argument->processFrame(freq, srate);
+		}
+		m_ph /= m_arguments.size();
+		m_ph = 1 - 2 * m_ph;
 	}
-	return result / number;
+	m_ph = absFraction(m_ph);
+	return result;
 }
 
 HPSynth::HPSynth(HPInstrument* instrument, NotePlayHandle* nph, HPModel* model) :

@@ -68,9 +68,12 @@ private:
 			return -shape(1.0f - ph);
 		}
 		float s = sinf(ph * F_2PI);
+		float sawify = m_sawify->value();
 		float saw = ph; //simplified and reversed
-		saw = 1.0f - m_sawify->value() * saw; //ready for multiplication with s
-		return saw * s;
+		saw = 1.0f - sawify * saw; //ready for multiplication with s
+		s *= saw;
+		float attenuate = (1 - sawify) * 0.75f + sawify * 2.3f;
+		return attenuate * s;
 	}
 	shared_ptr<FloatModel> m_sawify;
 };
