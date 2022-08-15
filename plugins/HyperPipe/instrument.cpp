@@ -171,12 +171,23 @@ gui::PluginView* HPInstrument::instantiateView(QWidget* parent) {
 	return new HPView(this, parent);
 }
 
-void HPInstrument::chNodeType(string nodeType, int model_i)
-{
+void HPInstrument::chNodeType(string nodeType, int model_i) {
 	if (nodeType == m_model.m_nodes[model_i]->name()) {
 		return;
 	}
+	shared_ptr<IntModel> pipe = nullptr;
+	vector<shared_ptr<IntModel>> arguments;
+	if (m_model.m_nodes[model_i] != nullptr) {
+		pipe = m_model.m_nodes[model_i]->m_pipe;
+		arguments = m_model.m_nodes[model_i]->m_arguments;
+	}
 	m_model.m_nodes[model_i] = m_definitions[nodeType]->newNode();
+	if (pipe != nullptr) {
+		m_model.m_nodes[model_i]->m_pipe = pipe;
+		if (! m_definitions[m_model.m_nodes[model_i]->name()]->forbidsArguments()) {
+			m_model.m_nodes[model_i]->m_arguments = arguments;
+		}
+	}
 }
 
 HPDefinitionBase::HPDefinitionBase(HPInstrument* instrument) :
