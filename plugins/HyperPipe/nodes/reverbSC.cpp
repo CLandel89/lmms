@@ -43,7 +43,7 @@ struct HPReverbSCModel : public HPModel::Node {
 			Node(instrument),
 			m_wd(make_shared<FloatModel>(0.5f, 0.0f, 1.0f, 0.01f, instrument, QString("reverbSC w/d"))),
 			m_dbIn(make_shared<FloatModel>(0.0f, -60.0f, 15.0f, 0.1f, instrument, QString("reverbSC dB in"))),
-			m_size(make_shared<FloatModel>(0.0f, 0.0f, 1.0f, 0.01f, instrument, QString("reverbSC size"))),
+			m_size(make_shared<FloatModel>(0.89f, 0.0f, 1.0f, 0.01f, instrument, QString("reverbSC size"))),
 			m_color(make_shared<FloatModel>(10'000.0f, 100.0f, 15'000.0f, 1.0f, instrument, QString("reverbSC color"))),
 			m_dbOut(make_shared<FloatModel>(0.0f, -60.0f, 15.0f, 0.1f, instrument, QString("reverbSC dB out")))
 	{}
