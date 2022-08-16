@@ -159,6 +159,7 @@ void HPView::sl_prepend() {
 	if (m_destructing) { return; }
 	auto mnode = m_instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode();
 	auto &nodes = m_instrument->m_model.m_nodes;
+	mnode->m_pipe->setValue(nodes[m_model_i]->m_pipe->value());
 	nodes.insert(nodes.begin() + m_model_i, mnode);
 	updateNodeView();
 }
@@ -176,6 +177,7 @@ void HPView::sl_append() {
 	if (m_destructing) { return; }
 	auto mnode = m_instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode();
 	auto &nodes = m_instrument->m_model.m_nodes;
+	mnode->m_pipe->setValue(nodes[m_model_i]->m_pipe->value());
 	nodes.insert(nodes.begin() + m_model_i + 1, mnode);
 	m_model_i++;
 	updateNodeView();
