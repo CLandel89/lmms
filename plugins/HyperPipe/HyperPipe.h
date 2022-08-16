@@ -269,12 +269,14 @@ private:
 struct HPAmModel;
 struct HPAmpModel;
 struct HPEnvModel;
+struct HPFilterModel;
 struct HPFmModel;
 struct HPLfoModel;
 struct HPMixModel;
 struct HPNoiseModel;
 struct HPOrganifyModel;
 struct HPOverdriveModel;
+struct HPReverbSCModel;
 struct HPShapesModel;
 struct HPSineModel;
 struct HPTuneModel;

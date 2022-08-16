@@ -59,12 +59,14 @@ map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument* instru
 	createDefinition<HPAmModel>(definitions, instrument);
 	createDefinition<HPAmpModel>(definitions, instrument);
 	createDefinition<HPEnvModel>(definitions, instrument);
+	createDefinition<HPFilterModel>(definitions, instrument);
 	createDefinition<HPFmModel>(definitions, instrument);
 	createDefinition<HPLfoModel>(definitions, instrument);
 	createDefinition<HPMixModel>(definitions, instrument);
 	createDefinition<HPNoiseModel>(definitions, instrument);
 	createDefinition<HPOrganifyModel>(definitions, instrument);
 	createDefinition<HPOverdriveModel>(definitions, instrument);
+	createDefinition<HPReverbSCModel>(definitions, instrument);
 	createDefinition<HPShapesModel>(definitions, instrument);
 	createDefinition<HPSineModel>(definitions, instrument);
 	createDefinition<HPTuneModel>(definitions, instrument);
