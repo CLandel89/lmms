@@ -54,7 +54,7 @@ inline void createDefinition(
 	definitions[definition->name()] = move(definition);
 }
 
-map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument* instrument) {
+inline map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument* instrument) {
 	map<string, unique_ptr<HPDefinitionBase>> definitions;
 	createDefinition<HPAmModel>(definitions, instrument);
 	createDefinition<HPAmpModel>(definitions, instrument);
@@ -68,6 +68,7 @@ map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument* instru
 	createDefinition<HPOverdriveModel>(definitions, instrument);
 	createDefinition<HPReverbSCModel>(definitions, instrument);
 	createDefinition<HPShapesModel>(definitions, instrument);
+	createDefinition<HPSquareModel>(definitions, instrument);
 	createDefinition<HPSineModel>(definitions, instrument);
 	createDefinition<HPTuneModel>(definitions, instrument);
 	return definitions;

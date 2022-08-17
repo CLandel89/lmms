@@ -32,6 +32,7 @@
 #include "InstrumentTrack.h"
 #include "Knob.h"
 #include "LcdSpinBox.h"
+#include "LedCheckBox.h"
 #include "lmms_math.h"
 #include "NotePlayHandle.h"
 #include "plugin_export.h"
@@ -278,6 +279,7 @@ struct HPOrganifyModel;
 struct HPOverdriveModel;
 struct HPReverbSCModel;
 struct HPShapesModel;
+struct HPSquareModel;
 struct HPSineModel;
 struct HPTuneModel;
 
@@ -285,16 +287,22 @@ struct HPTuneModel;
 
 // any ad-hoc utilities
 namespace lmms::hyperpipe {
+
+inline float hpposmodf(float a, float b) {
+	return fmod(fmod(a, b) + b, b);
+}
+
 /**
 	Smooth step, cosine-based.
 	Smoothes out rough changes near 0.0f and 1.0f.
 */
-inline float sstep(float a) {
+inline float hpsstep(float a) {
 	// cos: 1.0...-1.0 (...1.0)
 	// -cos: -1.0...1.0
 	// -cos + 1.0: 0.0...2.0
 	return (-cosf(a * F_PI) + 1.0f) / 2.0f;
 }
+
 //! A simple hasher for mapping names to numbers.
 /** Only 16-bit because the *.xpf files will contain exponential notation otherwise. */
 inline int16_t hphash(string name) {

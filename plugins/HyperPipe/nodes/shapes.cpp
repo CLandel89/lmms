@@ -38,11 +38,11 @@ struct HPShapesModel : public HPModel::Node {
 			Node(instrument),
 			m_shape(make_shared<FloatModel>(0.0f, -3.0f, 3.0f, 0.01f, instrument, QString("shape"))),
 			m_jitter(make_shared<FloatModel>(0.0f, 0.0f, 100.0f, 1.0f, instrument, QString("jitter"))),
-			m_smoothstep(make_shared<FloatModel>(0.0f, 0.0f, 1.0f, 0.01f, instrument, QString("smoothstep")))
+			m_smoothstep(make_shared<BoolModel>(false, instrument, QString("shapes smoothstep")))
 	{}
 	shared_ptr<FloatModel> m_shape;
 	shared_ptr<FloatModel> m_jitter;
-	shared_ptr<FloatModel> m_smoothstep;
+	shared_ptr<BoolModel> m_smoothstep;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateShapes(model, model_i);
 	}
@@ -146,33 +146,33 @@ private:
 	float shape(float ph) {
 		//continuously add to the jittering
 		m_jitterState = (127.0f * m_jitterState + fastRandf(m_jitter->value())) / 128.0f;
-		float finalShape = m_shape->value() + m_jitterState - 0.5f * m_jitter->value();
-		while (finalShape < 0.0f) { finalShape += 3.0f; }
-		while (finalShape >= 3.0f) { finalShape -= 3.0f; }
-		float morph = fraction(finalShape);
-		morph = sstep(morph);
+		float shape = m_shape->value() + m_jitterState - 0.5f * m_jitter->value();
+		shape = hpposmodf(shape, 3.0f);
+		uint8_t shapeType = uint8_t(shape);
+		float morph = fraction(shape);
+		morph = hpsstep(morph);
 		float amp; //the shapes with vertical edges sound too loud
 		float s;
-		if (finalShape < 1.0f) {
+		if (shapeType == 0) {
 			amp = 0.4f + 0.6f * morph;
 			s = saw2tri(ph, morph);
 		}
-		else if (finalShape < 2.0f) {
+		else if (shapeType == 1) {
 			amp = 1.0f - 0.7f * morph;
 			s = tri2sqr(ph, morph);
 		}
-		else {
+		else { // shapeType == 2
 			amp = 0.3f + 0.1f * morph;
 			s = sqr2saw(ph, morph);
 		}
-		float smoothstep = m_smoothstep->value();
-		float smoothstepped = 2 * sstep((s + 1) / 2) - 1;
-		smoothstepped = (1 - smoothstep) * s + smoothstep * smoothstepped;
-		return amp * smoothstepped;
+		if (m_smoothstep->value()) {
+			return amp * 2 * hpsstep((s + 1) / 2) - 1;
+		}
+		return amp * s;
 	}
 	shared_ptr<FloatModel> m_shape;
 	shared_ptr<FloatModel> m_jitter;
-	shared_ptr<FloatModel> m_smoothstep;
+	shared_ptr<BoolModel> m_smoothstep;
 	float m_jitterState = 0.0f;
 };
 
@@ -189,7 +189,7 @@ public:
 	HPShapesView(HPView* view) :
 			m_shape(view, "shape"),
 			m_jitter(view, "jitter"),
-			m_smoothstep(view, "smoothstep")
+			m_smoothstep(view, "shapes smoothstep")
 	{
 		m_widgets.emplace_back(&m_shape);
 		m_widgets.emplace_back(&m_jitter);
@@ -206,7 +206,7 @@ public:
 private:
 	Knob m_shape;
 	Knob m_jitter;
-	Knob m_smoothstep;
+	LedCheckBox m_smoothstep;
 };
 
 using Definition = HPDefinition<HPShapesModel>;
