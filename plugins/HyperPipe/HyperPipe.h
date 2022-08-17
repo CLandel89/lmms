@@ -36,6 +36,7 @@
 #include "lmms_math.h"
 #include "NotePlayHandle.h"
 #include "plugin_export.h"
+#include "Song.h"
 
 #include <map>
 #include <stdexcept>
@@ -279,8 +280,9 @@ struct HPOrganifyModel;
 struct HPOverdriveModel;
 struct HPReverbSCModel;
 struct HPShapesModel;
-struct HPSquareModel;
 struct HPSineModel;
+struct HPSquareModel;
+struct HPTransitionModel;
 struct HPTuneModel;
 
 }
@@ -290,6 +292,9 @@ namespace lmms::hyperpipe {
 
 inline float hpposmodf(float a, float b) {
 	return fmod(fmod(a, b) + b, b);
+}
+inline float hpposmodi(int a, int b) {
+	return (a % b + b) % b;
 }
 
 /**
