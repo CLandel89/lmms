@@ -35,11 +35,11 @@ inline unique_ptr<HPNode> instantiateSquare(HPModel* model, int model_i);
 struct HPSquareModel : public HPModel::Node {
 	HPSquareModel(Instrument* instrument) :
 			Node(instrument),
-			m_duty(make_shared<FloatModel>(0.5f, 0.0f, 1.0f, 0.01f, instrument, QString("duty cycle"))),
-			m_sstep(make_shared<BoolModel>(false, instrument, QString("square smoothstep")))
+			m_duty(0.5f, 0.0f, 1.0f, 0.01f, instrument, QString("duty cycle")),
+			m_sstep(false, instrument, QString("square smoothstep"))
 	{}
-	shared_ptr<FloatModel> m_duty;
-	shared_ptr<BoolModel> m_sstep;
+	FloatModel m_duty;
+	BoolModel m_sstep;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateSquare(model, model_i);
 	}
@@ -48,23 +48,23 @@ struct HPSquareModel : public HPModel::Node {
 	}
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_duty->loadSettings(elem, is + "_duty");
-		m_sstep->loadSettings(elem, is + "_sstep");
+		m_duty.loadSettings(elem, is + "_duty");
+		m_sstep.loadSettings(elem, is + "_sstep");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_duty->saveSettings(doc, elem, is + "_duty");
-		m_sstep->saveSettings(doc, elem, is + "_sstep");
+		m_duty.saveSettings(doc, elem, is + "_duty");
+		m_sstep.saveSettings(doc, elem, is + "_sstep");
 	}
 };
 
 class HPSquare : public HPOsc
 {
 public:
-	HPSquare(HPModel* model, int model_i, shared_ptr<HPSquareModel> nmodel) :
+	HPSquare(HPModel* model, int model_i, HPSquareModel* nmodel) :
 			HPOsc(model, model_i),
-			m_duty(nmodel->m_duty),
-			m_sstep(nmodel->m_sstep)
+			m_duty(&nmodel->m_duty),
+			m_sstep(&nmodel->m_sstep)
 	{}
 private:
 	float shape(float ph) {
@@ -94,36 +94,36 @@ private:
 		smoothstepped = 2 * smoothstepped - 1;
 		return smoothstepped;
 	}
-	shared_ptr<FloatModel> m_duty;
-	shared_ptr<BoolModel> m_sstep;
+	FloatModel *m_duty;
+	BoolModel *m_sstep;
 };
 
 inline unique_ptr<HPNode> instantiateSquare(HPModel* model, int model_i) {
 	return make_unique<HPSquare>(
 		model,
 		model_i,
-		static_pointer_cast<HPSquareModel>(model->m_nodes[model_i])
+		static_cast<HPSquareModel*>(model->m_nodes[model_i].get())
 	);
 }
 
 class HPSquareView : public HPNodeView {
 public:
 	HPSquareView(HPView* view) :
-			m_duty(view, "duty cylce"),
-			m_sstep(view, "square smoothstep",  LedCheckBox::Green)
+			m_duty(new Knob(view, "duty cylce")),
+			m_sstep(new LedCheckBox(view, "square smoothstep"))
 	{
-		m_widgets.emplace_back(&m_duty);
-		m_sstep.move(30, 0);
-		m_widgets.emplace_back(&m_sstep);
+		m_widgets.emplace_back(m_duty);
+		m_sstep->move(30, 0);
+		m_widgets.emplace_back(m_sstep);
 	}
-	void setModel(shared_ptr<HPModel::Node> model) {
-		shared_ptr<HPSquareModel> modelCast = static_pointer_cast<HPSquareModel>(model);
-		m_duty.setModel(modelCast->m_duty.get());
-		m_sstep.setModel(modelCast->m_sstep.get());
+	void setModel(HPModel::Node* model) {
+		HPSquareModel *modelCast = static_cast<HPSquareModel*>(model);
+		m_duty->setModel(&modelCast->m_duty);
+		m_sstep->setModel(&modelCast->m_sstep);
 	}
 private:
-	Knob m_duty;
-	LedCheckBox m_sstep;
+	Knob *m_duty;
+	LedCheckBox *m_sstep;
 };
 
 using Definition = HPDefinition<HPSquareModel>;
@@ -136,8 +136,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return SQUARE_NAME; }
 
-template<> shared_ptr<HPSquareModel> Definition::newNodeImpl() {
-	return make_shared<HPSquareModel>(m_instrument);
+template<> unique_ptr<HPSquareModel> Definition::newNodeImpl() {
+	return make_unique<HPSquareModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {

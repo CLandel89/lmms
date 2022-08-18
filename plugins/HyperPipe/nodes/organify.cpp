@@ -35,33 +35,33 @@ inline unique_ptr<HPNode> instantiateOrganify(HPModel* model, int model_i);
 struct HPOrganifyModel : public HPModel::Node {
 	HPOrganifyModel(Instrument* instrument) :
 			Node(instrument),
-			m_tones(make_shared<IntModel>(1, 1, 9, instrument, QString("tones"))),
-			m_weaken(make_shared<FloatModel>(1.0f, -5.0f, 10.0f, 0.1f, instrument, QString("weaken")))
+			m_tones(1, 1, 9, instrument, QString("tones")),
+			m_weaken(1.0f, -5.0f, 10.0f, 0.1f, instrument, QString("weaken"))
 	{}
-	shared_ptr<IntModel> m_tones;
-	shared_ptr<FloatModel> m_weaken;
+	IntModel m_tones;
+	FloatModel m_weaken;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateOrganify(model, model_i);
 	}
 	string name() { return ORGANIFY_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_tones->loadSettings(elem, is + "_tones");
-		m_weaken->loadSettings(elem, is + "_weaken");
+		m_tones.loadSettings(elem, is + "_tones");
+		m_weaken.loadSettings(elem, is + "_weaken");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_tones->saveSettings(doc, elem, is + "_tones");
-		m_weaken->saveSettings(doc, elem, is + "_weaken");
+		m_tones.saveSettings(doc, elem, is + "_tones");
+		m_weaken.saveSettings(doc, elem, is + "_weaken");
 	}
 };
 
 class HPOrganify : public HPNode
 {
 public:
-	HPOrganify(HPModel* model, int model_i, shared_ptr<HPOrganifyModel> nmodel) :
-			m_tones(nmodel->m_tones->value()),
-			m_weaken(nmodel->m_weaken),
+	HPOrganify(HPModel* model, int model_i, HPOrganifyModel* nmodel) :
+			m_tones(nmodel->m_tones.value()),
+			m_weaken(&nmodel->m_weaken),
 			m_prev(m_tones + 1 + m_tones)
 	{
 		for (int t = 0; t < m_tones + 1 + m_tones; t++) {
@@ -94,7 +94,7 @@ private:
 		return result / sumWeights;
 	}
 	int m_tones;
-	shared_ptr<FloatModel> m_weaken;
+	FloatModel *m_weaken;
 	vector<unique_ptr<HPNode>> m_prev;
 };
 
@@ -102,28 +102,28 @@ inline unique_ptr<HPNode> instantiateOrganify(HPModel* model, int model_i) {
 	return make_unique<HPOrganify>(
 		model,
 		model_i,
-		static_pointer_cast<HPOrganifyModel>(model->m_nodes[model_i])
+		static_cast<HPOrganifyModel*>(model->m_nodes[model_i].get())
 	);
 }
 
 class HPOrganifyView : public HPNodeView {
 public:
 	HPOrganifyView(HPView* view) :
-			m_tones(1, view, "tones"),
-			m_weaken(view, "weaken")
+			m_tones(new LcdSpinBox(1, view, "tones")),
+			m_weaken(new Knob(view, "weaken"))
 	{
-		m_widgets.emplace_back(&m_tones);
-		m_weaken.move(25, 0);
-		m_widgets.emplace_back(&m_weaken);
+		m_widgets.emplace_back(m_tones);
+		m_weaken->move(25, 0);
+		m_widgets.emplace_back(m_weaken);
 	}
-	void setModel(shared_ptr<HPModel::Node> model) {
-		shared_ptr<HPOrganifyModel> modelCast = static_pointer_cast<HPOrganifyModel>(model);
-		m_tones.setModel(modelCast->m_tones.get());
-		m_weaken.setModel(modelCast->m_weaken.get());
+	void setModel(HPModel::Node *model) {
+		HPOrganifyModel *modelCast = static_cast<HPOrganifyModel*>(model);
+		m_tones->setModel(&modelCast->m_tones);
+		m_weaken->setModel(&modelCast->m_weaken);
 	}
 private:
-	LcdSpinBox m_tones;
-	Knob m_weaken;
+	LcdSpinBox *m_tones;
+	Knob *m_weaken;
 };
 
 using Definition = HPDefinition<HPOrganifyModel>;
@@ -138,8 +138,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return ORGANIFY_NAME; }
 
-template<> shared_ptr<HPOrganifyModel> Definition::newNodeImpl() {
-	return make_shared<HPOrganifyModel>(m_instrument);
+template<> unique_ptr<HPOrganifyModel> Definition::newNodeImpl() {
+	return make_unique<HPOrganifyModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {

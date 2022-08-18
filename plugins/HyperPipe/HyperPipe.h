@@ -75,9 +75,9 @@ public:
 			"arguments"; may do so multiple times (e.g., "organify").
 		*/
 		virtual unique_ptr<HPNode> instantiate(HPModel* model, int model_i) = 0;
-		shared_ptr<IntModel> m_pipe;
+		IntModel m_pipe;
 		//! "Argument" pipes which mix with or modulate the "current" pipe.
-		vector<shared_ptr<IntModel>> m_arguments;
+		vector<unique_ptr<IntModel>> m_arguments;
 		virtual string name() = 0;
 		virtual void load(int model_i, const QDomElement& elem) = 0;
 		virtual void save(int model_i, QDomDocument& doc, QDomElement& elem) = 0;
@@ -86,8 +86,8 @@ public:
 	unique_ptr<HPNode> instantiatePrev(int i);
 	//! Instantiates the "argument" nodes; may be smaller than node->m_arguments, but never contains nullptr.
 	vector<unique_ptr<HPNode>> instantiateArguments(int i);
-	static shared_ptr<IntModel> newArgument(Instrument* instrument, int i);
-	vector<shared_ptr<Node>> m_nodes;
+	static unique_ptr<IntModel> newArgument(Instrument* instrument, int i);
+	vector<unique_ptr<Node>> m_nodes;
 };
 
 /**
@@ -137,6 +137,7 @@ class HPInstrument : public Instrument
 	Q_OBJECT
 public:
 	HPInstrument(InstrumentTrack* track);
+	~HPInstrument() override = default;
 	void chNodeType(string nodeType, int model_i);
 	void playNote(NotePlayHandle* nph, sampleFrame* working_buffer) override;
 	void deleteNotePluginData(NotePlayHandle* nph) override;
@@ -160,8 +161,8 @@ public:
 	void hide();
 	void moveRel(int x, int y);
 	void show();
-	virtual void setModel(shared_ptr<HPModel::Node> model) = 0;
-	vector<QWidget*> m_widgets;
+	virtual void setModel(HPModel::Node* model) = 0;
+	vector<QWidget*> m_widgets; //!< for "show/hide" and "move"
 };
 
 class HPVArguments : QObject {
@@ -169,17 +170,17 @@ class HPVArguments : QObject {
 public:
 	HPVArguments(HPView* view, HPInstrument* instrument);
 	~HPVArguments();
-	void setModel(shared_ptr<HPModel::Node> model);
+	void setModel(HPModel::Node* model);
 private:
 	void update();
 	HPInstrument *m_instrument;
-	shared_ptr<HPModel::Node> m_model = nullptr;
+	HPModel::Node *m_model = nullptr;
 	int m_pos = 0;
-	vector<unique_ptr<LcdSpinBox>> m_pipes;
-	PixmapButton m_left;
-	PixmapButton m_right;
-	PixmapButton m_add;
-	PixmapButton m_delete;
+	vector<LcdSpinBox*> m_pipes;
+	PixmapButton *m_left;
+	PixmapButton *m_right;
+	PixmapButton *m_add;
+	PixmapButton *m_delete;
 	bool m_destructing = false;
 private slots:
 	void sl_left();
@@ -193,23 +194,23 @@ class HPView : public InstrumentView //InstrumentViewFixedSize
 	Q_OBJECT
 public:
 	HPView(HPInstrument* instrument, QWidget* parent);
-	~HPView();
+	~HPView() override;
 private:
 	void updateNodeView();
 	map<string, unique_ptr<HPNodeView>> m_nodeViews;
 	HPNodeView *m_curNode = nullptr;
 	HPInstrument *m_instrument;
 	int m_model_i = 0;
-	ComboBox m_nodeType;
+	ComboBox *m_nodeType;
 	ComboBoxModel m_nodeTypeModel;
-	LcdSpinBox m_pipe;
-	PixmapButton m_prev;
-	PixmapButton m_next;
-	PixmapButton m_moveUp;
-	PixmapButton m_prepend;
-	PixmapButton m_delete;
-	PixmapButton m_append;
-	PixmapButton m_moveDown;
+	LcdSpinBox *m_pipe;
+	PixmapButton *m_prev;
+	PixmapButton *m_next;
+	PixmapButton *m_moveUp;
+	PixmapButton *m_prepend;
+	PixmapButton *m_delete;
+	PixmapButton *m_append;
+	PixmapButton *m_moveDown;
 	HPVArguments m_arguments;
 	bool m_destructing = false;
 
@@ -242,7 +243,7 @@ public:
 	virtual ~HPDefinitionBase() = default;
 	bool forbidsArguments();
 	virtual string name() = 0;
-	virtual shared_ptr<HPModel::Node> newNode() = 0;
+	virtual unique_ptr<HPModel::Node> newNode() = 0;
 	virtual unique_ptr<HPNodeView> instantiateView(HPView* hpview) = 0;
 	static const string DEFAULT_TYPE;
 protected:
@@ -256,10 +257,10 @@ public:
 	HPDefinition(HPInstrument* instrument);
 	~HPDefinition();
 	string name();
-	shared_ptr<HPModel::Node> newNode() {
+	unique_ptr<HPModel::Node> newNode() {
 		return newNodeImpl();
 	}
-	shared_ptr<M> newNodeImpl();
+	unique_ptr<M> newNodeImpl();
 	unique_ptr<HPNodeView> instantiateView(HPView* hpview);
 private:
 	//! Any additional members can be defined in Impl, if necessary.
@@ -321,4 +322,5 @@ inline int16_t hphash(string name) {
 	}
 	return result;
 }
-}
+
+} // namespace lmms::hyperpipe

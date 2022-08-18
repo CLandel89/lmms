@@ -35,26 +35,26 @@ inline unique_ptr<HPNode> instantiateTransition(HPModel* model, int model_i);
 struct HPTransitionModel : public HPModel::Node {
 	HPTransitionModel(Instrument* instrument) :
 			Node(instrument),
-			m_tS(make_shared<FloatModel>(0.0f, 0.0f, 2.0f, 0.01f, instrument, QString("transition seconds"))),
-			m_tB(make_shared<FloatModel>(1.0f, 0.0f, 10.0f, 0.001f, instrument, QString("transition beats"))),
-			m_attExp(make_shared<FloatModel>(10.0f, 0.01f, 20.0f, 0.01f, instrument, QString("transition attack exponent"))),
-			m_order(make_shared<ComboBoxModel>(instrument, QString("transition order")))
+			m_tS(0.0f, 0.0f, 2.0f, 0.01f, instrument, QString("transition seconds")),
+			m_tB(1.0f, 0.0f, 10.0f, 0.001f, instrument, QString("transition beats")),
+			m_attExp(10.0f, 0.01f, 20.0f, 0.01f, instrument, QString("transition attack exponent")),
+			m_order(instrument, QString("transition order"))
 	{
 		for (int o = 0; o < N_ORDER_TYPES; o++) {
 			switch (o) {
-				case KEEP_LAST: m_order->addItem("keep last"); break;
-				case PINGPONG: m_order->addItem("pingpong"); break;
-				case LOOP: m_order->addItem("loop"); break;
+				case KEEP_LAST: m_order.addItem("keep last"); break;
+				case PINGPONG: m_order.addItem("pingpong"); break;
+				case LOOP: m_order.addItem("loop"); break;
 				default:
 					string msg = "Please give a label to " + o + string(" in HPTransitionModel::OrderTypes.");
 					throw invalid_argument(msg);
 			}
 		}
 	}
-	shared_ptr<FloatModel> m_tS;
-	shared_ptr<FloatModel> m_tB;
-	shared_ptr<FloatModel> m_attExp;
-	shared_ptr<ComboBoxModel> m_order;
+	FloatModel m_tS;
+	FloatModel m_tB;
+	FloatModel m_attExp;
+	ComboBoxModel m_order;
 	enum OrderTypes {
 		KEEP_LAST,
 		PINGPONG,
@@ -67,28 +67,28 @@ struct HPTransitionModel : public HPModel::Node {
 	string name() { return TRANSITION_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_tS->loadSettings(elem, is + "_tS");
-		m_tB->loadSettings(elem, is + "_tB");
-		m_attExp->loadSettings(elem, is + "_attExp");
-		m_order->loadSettings(elem, is + "_order");
+		m_tS.loadSettings(elem, is + "_tS");
+		m_tB.loadSettings(elem, is + "_tB");
+		m_attExp.loadSettings(elem, is + "_attExp");
+		m_order.loadSettings(elem, is + "_order");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_tS->saveSettings(doc, elem, is + "_tS");
-		m_tB->saveSettings(doc, elem, is + "_tB");
-		m_attExp->saveSettings(doc, elem, is + "_attExp");
-		m_order->saveSettings(doc, elem, is + "_order");
+		m_tS.saveSettings(doc, elem, is + "_tS");
+		m_tB.saveSettings(doc, elem, is + "_tB");
+		m_attExp.saveSettings(doc, elem, is + "_attExp");
+		m_order.saveSettings(doc, elem, is + "_order");
 	}
 };
 
 class HPTransition : public HPNode
 {
 public:
-	HPTransition(HPModel* model, int model_i, shared_ptr<HPTransitionModel> nmodel) :
-			m_tS(nmodel->m_tS),
-			m_tB(nmodel->m_tB),
-			m_attExp(nmodel->m_attExp),
-			m_order(nmodel->m_order)
+	HPTransition(HPModel* model, int model_i, HPTransitionModel* nmodel) :
+			m_tS(&nmodel->m_tS),
+			m_tB(&nmodel->m_tB),
+			m_attExp(&nmodel->m_attExp),
+			m_order(&nmodel->m_order)
 	{
 		auto prev = model->instantiatePrev(model_i);
 		if (prev != nullptr) {
@@ -157,8 +157,8 @@ private:
 					from = m_nodes.back().get();
 					to = m_nodes[0].get();
 				}
-			}
 				break;
+			}
 			default:
 				string msg = "It appears that there is no implementation for HyperPipe transition order type "
 					+ m_order->value() + string(".");
@@ -178,10 +178,10 @@ private:
 		float t = to->processFrame(freq, srate);
 		return (1 - interp) * f + interp * t;
 	}
-	shared_ptr<FloatModel> m_tS;
-	shared_ptr<FloatModel> m_tB;
-	shared_ptr<FloatModel> m_attExp;
-	shared_ptr<ComboBoxModel> m_order;
+	FloatModel *m_tS;
+	FloatModel *m_tB;
+	FloatModel *m_attExp;
+	ComboBoxModel *m_order;
 	vector<unique_ptr<HPNode>> m_nodes;
 	float m_state = 0.0f;
 };
@@ -190,38 +190,38 @@ inline unique_ptr<HPNode> instantiateTransition(HPModel* model, int model_i) {
 	return make_unique<HPTransition>(
 		model,
 		model_i,
-		static_pointer_cast<HPTransitionModel>(model->m_nodes[model_i])
+		static_cast<HPTransitionModel*>(model->m_nodes[model_i].get())
 	);
 }
 
 class HPTransitionView : public HPNodeView {
 public:
 	HPTransitionView(HPView* view) :
-			m_tS(view, "transition seconds"),
-			m_tB(view, "transition beats"),
-			m_attExp(view, "transition attack exponent"),
-			m_order(view, "transition order")
+			m_tS(new Knob(view, "transition seconds")),
+			m_tB(new Knob(view, "transition beats")),
+			m_attExp(new Knob(view, "transition attack exponent")),
+			m_order(new ComboBox(view, "transition order"))
 	{
-		m_widgets.emplace_back(&m_tS);
-		m_tB.move(30, 0);
-		m_widgets.emplace_back(&m_tB);
-		m_attExp.move(60, 0);
-		m_widgets.emplace_back(&m_attExp);
-		m_order.move(90, 0);
-		m_widgets.emplace_back(&m_order);
+		m_widgets.emplace_back(m_tS);
+		m_tB->move(30, 0);
+		m_widgets.emplace_back(m_tB);
+		m_attExp->move(60, 0);
+		m_widgets.emplace_back(m_attExp);
+		m_order->move(90, 0);
+		m_widgets.emplace_back(m_order);
 	}
-	void setModel(shared_ptr<HPModel::Node> model) {
-		shared_ptr<HPTransitionModel> modelCast = static_pointer_cast<HPTransitionModel>(model);
-		m_tS.setModel(modelCast->m_tS.get());
-		m_tB.setModel(modelCast->m_tB.get());
-		m_attExp.setModel(modelCast->m_attExp.get());
-		m_order.setModel(modelCast->m_order.get());
+	void setModel(HPModel::Node* model) {
+		HPTransitionModel *modelCast = static_cast<HPTransitionModel*>(model);
+		m_tS->setModel(&modelCast->m_tS);
+		m_tB->setModel(&modelCast->m_tB);
+		m_attExp->setModel(&modelCast->m_attExp);
+		m_order->setModel(&modelCast->m_order);
 	}
 private:
-	Knob m_tS;
-	Knob m_tB;
-	Knob m_attExp;
-	ComboBox m_order;
+	Knob *m_tS;
+	Knob *m_tB;
+	Knob *m_attExp;
+	ComboBox *m_order;
 };
 
 using Definition = HPDefinition<HPTransitionModel>;
@@ -234,8 +234,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return TRANSITION_NAME; }
 
-template<> shared_ptr<HPTransitionModel> Definition::newNodeImpl() {
-	return make_shared<HPTransitionModel>(m_instrument);
+template<> unique_ptr<HPTransitionModel> Definition::newNodeImpl() {
+	return make_unique<HPTransitionModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {

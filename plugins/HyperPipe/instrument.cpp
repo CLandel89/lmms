@@ -116,7 +116,7 @@ void HPInstrument::saveSettings(QDomDocument& doc, QDomElement& elem) {
 	for (int i = 0; i < m_model.m_nodes.size(); i++) {
 		QString is = "n" + QString::number(i);
 		auto& node = m_model.m_nodes[i];
-		node->m_pipe->saveSettings(doc, elem, is + "_pipe");
+		node->m_pipe.saveSettings(doc, elem, is + "_pipe");
 		IntModel nameHash(hphash(node->name()), INT16_MIN, INT16_MAX);
 		nameHash.saveSettings(doc, elem, is + "_type");
 		auto& arguments = node->m_arguments;
@@ -158,15 +158,15 @@ void HPInstrument::loadSettings(const QDomElement& elem) {
 			);
 		}
 		auto& node = m_model.m_nodes.back();
-		node->m_pipe->loadSettings(elem, is + "_pipe");
+		node->m_pipe.loadSettings(elem, is + "_pipe");
 		IntModel argumentsSize(0, 0, 9999);
 		argumentsSize.loadSettings(elem, is + "_arguments_size");
 		auto& arguments = node->m_arguments;
 		for (int ia = 0; ia < argumentsSize.value(); ia++) {
 			QString ias = QString::number(ia);
-			shared_ptr<IntModel> argument = HPModel::newArgument(this, ia);
+			auto argument = HPModel::newArgument(this, ia);
 			argument->loadSettings(elem, is + "_argument_" + ias);
-			arguments.emplace_back(argument);
+			arguments.emplace_back(move(argument));
 		}
 	}
 }
@@ -179,17 +179,16 @@ void HPInstrument::chNodeType(string nodeType, int model_i) {
 	if (nodeType == m_model.m_nodes[model_i]->name()) {
 		return;
 	}
-	shared_ptr<IntModel> pipe = nullptr;
-	vector<shared_ptr<IntModel>> arguments;
-	if (m_model.m_nodes[model_i] != nullptr) {
-		pipe = m_model.m_nodes[model_i]->m_pipe;
-		arguments = m_model.m_nodes[model_i]->m_arguments;
+	int pipe = m_model.m_nodes[model_i]->m_pipe.value();
+	vector<unique_ptr<IntModel>> arguments;
+	for (auto &argument : m_model.m_nodes[model_i]->m_arguments) {
+		arguments.emplace_back(move(argument));
 	}
 	m_model.m_nodes[model_i] = m_definitions[nodeType]->newNode();
-	if (pipe != nullptr) {
-		m_model.m_nodes[model_i]->m_pipe = pipe;
-		if (! m_definitions[m_model.m_nodes[model_i]->name()]->forbidsArguments()) {
-			m_model.m_nodes[model_i]->m_arguments = arguments;
+	m_model.m_nodes[model_i]->m_pipe.setValue(pipe);
+	if (! m_definitions[m_model.m_nodes[model_i]->name()]->forbidsArguments()) {
+		for (auto &argument : arguments) {
+			m_model.m_nodes[model_i]->m_arguments.emplace_back(move(argument));
 		}
 	}
 }

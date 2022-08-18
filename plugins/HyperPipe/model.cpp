@@ -37,7 +37,7 @@ HPModel::HPModel(HPInstrument* instrument) {
 unique_ptr<HPNode> HPModel::instantiatePrev(int i) {
 	// the "current" node looks backwards for any "previous" node
 	for (int j = i - 1; j >= 0; j--) {
-		if (m_nodes[i]->m_pipe->value() == m_nodes[j]->m_pipe->value()) {
+		if (m_nodes[i]->m_pipe.value() == m_nodes[j]->m_pipe.value()) {
 			return m_nodes[j]->instantiate(this, j);
 		}
 	}
@@ -55,7 +55,7 @@ vector<unique_ptr<HPNode>> HPModel::instantiateArguments(int i)
 	for (int j = i - 1; j >= 0; j--) {
 		for (int ai = 0; ai < m_nodes[i]->m_arguments.size(); ai++) {
 			if (result[ai] == nullptr && // only set at first encounter
-					m_nodes[i]->m_arguments[ai]->value() == m_nodes[j]->m_pipe->value())
+					m_nodes[i]->m_arguments[ai]->value() == m_nodes[j]->m_pipe.value())
 			{
 				result[ai] = m_nodes[j]->instantiate(this, j);
 			}
@@ -70,12 +70,12 @@ vector<unique_ptr<HPNode>> HPModel::instantiateArguments(int i)
 	return result;
 }
 
-shared_ptr<IntModel> HPModel::newArgument(Instrument* instrument, int i) {
-	return make_shared<IntModel>(0, 0, 99, instrument, QString("argument" + i));
+unique_ptr<IntModel> HPModel::newArgument(Instrument* instrument, int i) {
+	return make_unique<IntModel>(0, 0, 99, instrument, QString("argument" + i));
 }
 
 HPModel::Node::Node(Instrument* instrument) :
-		m_pipe(make_shared<IntModel>(0, 0, 99, instrument, QString("pipe")))
+		m_pipe(0, 0, 99, instrument, QString("pipe"))
 {}
 
 } // namespace lmms::hyperpipe

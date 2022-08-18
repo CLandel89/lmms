@@ -35,33 +35,33 @@ inline unique_ptr<HPNode> instantiateOverdrive(HPModel* model, int model_i);
 struct HPOverdriveModel : public HPModel::Node {
 	HPOverdriveModel(Instrument* instrument) :
 			Node(instrument),
-			m_drive(make_shared<FloatModel>(0.0f, -50.0f, 50.0f, 0.1f, instrument, QString("drive (+dB)"))),
-			m_makeup(make_shared<FloatModel>(0.0f, -50.0f, 50.0f, 0.1f, instrument, QString("makeup (-dB)")))
+			m_drive(0.0f, -50.0f, 50.0f, 0.1f, instrument, QString("drive (+dB)")),
+			m_makeup(0.0f, -50.0f, 50.0f, 0.1f, instrument, QString("makeup (-dB)"))
 	{}
-	shared_ptr<FloatModel> m_drive;
-	shared_ptr<FloatModel> m_makeup;
+	FloatModel m_drive;
+	FloatModel m_makeup;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateOverdrive(model, model_i);
 	}
 	string name() { return OVERDRIVE_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_drive->loadSettings(elem, is + "_drive");
-		m_makeup->loadSettings(elem, is + "_makeup");
+		m_drive.loadSettings(elem, is + "_drive");
+		m_makeup.loadSettings(elem, is + "_makeup");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_drive->saveSettings(doc, elem, is + "_drive");
-		m_makeup->saveSettings(doc, elem, is + "_makeup");
+		m_drive.saveSettings(doc, elem, is + "_drive");
+		m_makeup.saveSettings(doc, elem, is + "_makeup");
 	}
 };
 
 class HPOverdrive : public HPNode
 {
 public:
-	HPOverdrive(HPModel* model, int model_i, shared_ptr<HPOverdriveModel> nmodel) :
-			m_drive(nmodel->m_drive),
-			m_makeup(nmodel->m_makeup),
+	HPOverdrive(HPModel* model, int model_i, HPOverdriveModel* nmodel) :
+			m_drive(&nmodel->m_drive),
+			m_makeup(&nmodel->m_makeup),
 			m_prev(model->instantiatePrev(model_i))
 	{}
 private:
@@ -76,8 +76,8 @@ private:
 		makeup = powf(10.0f, -makeup / 20);
 		return makeup * atanf(drive * prev);
 	}
-	shared_ptr<FloatModel> m_drive;
-	shared_ptr<FloatModel> m_makeup;
+	FloatModel *m_drive;
+	FloatModel *m_makeup;
 	unique_ptr<HPNode> m_prev;
 };
 
@@ -85,28 +85,28 @@ inline unique_ptr<HPNode> instantiateOverdrive(HPModel* model, int model_i) {
 	return make_unique<HPOverdrive>(
 		model,
 		model_i,
-		static_pointer_cast<HPOverdriveModel>(model->m_nodes[model_i])
+		static_cast<HPOverdriveModel*>(model->m_nodes[model_i].get())
 	);
 }
 
 class HPOverdriveView : public HPNodeView {
 public:
 	HPOverdriveView(HPView* view) :
-			m_drive(view, "drive (+dB)"),
-			m_makeup(view, "makeup (-dB)")
+			m_drive(new Knob(view, "drive (+dB)")),
+			m_makeup(new Knob(view, "makeup (-dB)"))
 	{
-		m_widgets.emplace_back(&m_drive);
-		m_makeup.move(30, 0);
-		m_widgets.emplace_back(&m_makeup);
+		m_widgets.emplace_back(m_drive);
+		m_makeup->move(30, 0);
+		m_widgets.emplace_back(m_makeup);
 	}
-	void setModel(shared_ptr<HPModel::Node> model) {
-		shared_ptr<HPOverdriveModel> modelCast = static_pointer_cast<HPOverdriveModel>(model);
-		m_drive.setModel(modelCast->m_drive.get());
-		m_makeup.setModel(modelCast->m_makeup.get());
+	void setModel(HPModel::Node *model) {
+		HPOverdriveModel *modelCast = static_cast<HPOverdriveModel*>(model);
+		m_drive->setModel(&modelCast->m_drive);
+		m_makeup->setModel(&modelCast->m_makeup);
 	}
 private:
-	Knob m_drive;
-	Knob m_makeup;
+	Knob *m_drive;
+	Knob *m_makeup;
 };
 
 using Definition = HPDefinition<HPOverdriveModel>;
@@ -121,8 +121,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return OVERDRIVE_NAME; }
 
-template<> shared_ptr<HPOverdriveModel> Definition::newNodeImpl() {
-	return make_shared<HPOverdriveModel>(m_instrument);
+template<> unique_ptr<HPOverdriveModel> Definition::newNodeImpl() {
+	return make_unique<HPOverdriveModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {

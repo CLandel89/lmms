@@ -35,28 +35,28 @@ inline unique_ptr<HPNode> instantiateFm(HPModel* model, int model_i);
 struct HPFmModel : public HPModel::Node {
 	HPFmModel(Instrument* instrument) :
 			Node(instrument),
-			m_amp(make_shared<FloatModel>(1.0f, 0.0f, 50.0f, 0.1f, instrument, QString("FM amp")))
+			m_amp(1.0f, 0.0f, 50.0f, 0.1f, instrument, QString("FM amp"))
 	{}
-	shared_ptr<FloatModel> m_amp;
+	FloatModel m_amp;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateFm(model, model_i);
 	}
 	string name() { return FM_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_amp->loadSettings(elem, is + "_amp");
+		m_amp.loadSettings(elem, is + "_amp");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_amp->saveSettings(doc, elem, is + "_amp");
+		m_amp.saveSettings(doc, elem, is + "_amp");
 	}
 };
 
 class HPFm : public HPNode
 {
 public:
-	HPFm(HPModel* model, int model_i, shared_ptr<HPFmModel> nmodel) :
-			m_amp(nmodel->m_amp),
+	HPFm(HPModel* model, int model_i, HPFmModel* nmodel) :
+			m_amp(&nmodel->m_amp),
 			m_prev(model->instantiatePrev(model_i)),
 			m_arguments(model->instantiateArguments(model_i))
 	{}
@@ -73,7 +73,7 @@ private:
 		float prevFreq = (mod + 1.0f) * freq;
 		return m_prev->processFrame(prevFreq, srate);
 	}
-	shared_ptr<FloatModel> m_amp;
+	FloatModel *m_amp;
 	unique_ptr<HPNode> m_prev;
 	vector<unique_ptr<HPNode>> m_arguments;
 };
@@ -82,23 +82,23 @@ inline unique_ptr<HPNode> instantiateFm(HPModel* model, int model_i) {
 	return make_unique<HPFm>(
 		model,
 		model_i,
-		static_pointer_cast<HPFmModel>(model->m_nodes[model_i])
+		static_cast<HPFmModel*>(model->m_nodes[model_i].get())
 	);
 }
 
 class HPFmView : public HPNodeView {
 public:
 	HPFmView(HPView* view) :
-			m_amp(view, "FM amp")
+			m_amp(new Knob(view, "FM amp"))
 	{
-		m_widgets.emplace_back(&m_amp);
+		m_widgets.emplace_back(m_amp);
 	}
-	void setModel(shared_ptr<HPModel::Node> model) {
-		shared_ptr<HPFmModel> modelCast = static_pointer_cast<HPFmModel>(model);
-		m_amp.setModel(modelCast->m_amp.get());
+	void setModel(HPModel::Node *model) {
+		HPFmModel* modelCast = static_cast<HPFmModel*>(model);
+		m_amp->setModel(&modelCast->m_amp);
 	}
 private:
-	Knob m_amp;
+	Knob *m_amp;
 };
 
 using Definition = HPDefinition<HPFmModel>;
@@ -111,8 +111,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return FM_NAME; }
 
-template<> shared_ptr<HPFmModel> Definition::newNodeImpl() {
-	return make_shared<HPFmModel>(m_instrument);
+template<> unique_ptr<HPFmModel> Definition::newNodeImpl() {
+	return make_unique<HPFmModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {

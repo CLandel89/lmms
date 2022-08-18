@@ -35,28 +35,28 @@ inline unique_ptr<HPNode> instantiateAm(HPModel* model, int model_i);
 struct HPAmModel : public HPModel::Node {
 	HPAmModel(Instrument* instrument) :
 			Node(instrument),
-			m_amt(make_shared<FloatModel>(0.5f, 0.0f, 2.0f, 0.01f, instrument, QString("AM amount")))
+			m_amt(0.5f, 0.0f, 2.0f, 0.01f, instrument, QString("AM amount"))
 	{}
-	shared_ptr<FloatModel> m_amt;
+	FloatModel m_amt;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateAm(model, model_i);
 	}
 	string name() { return AM_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_amt->loadSettings(elem, is + "_amt");
+		m_amt.loadSettings(elem, is + "_amt");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_amt->saveSettings(doc, elem, is + "_amt");
+		m_amt.saveSettings(doc, elem, is + "_amt");
 	}
 };
 
 class HPAm : public HPNode
 {
 public:
-	HPAm(HPModel* model, int model_i, shared_ptr<HPAmModel> nmodel) :
-			m_amt(nmodel->m_amt),
+	HPAm(HPModel* model, int model_i, HPAmModel* nmodel) :
+			m_amt(&nmodel->m_amt),
 			m_prev(model->instantiatePrev(model_i)),
 			m_arguments(model->instantiateArguments(model_i))
 	{}
@@ -75,7 +75,7 @@ private:
 		}
 		return result;
 	}
-	shared_ptr<FloatModel> m_amt;
+	FloatModel* m_amt;
 	unique_ptr<HPNode> m_prev;
 	vector<unique_ptr<HPNode>> m_arguments;
 };
@@ -84,23 +84,23 @@ inline unique_ptr<HPNode> instantiateAm(HPModel* model, int model_i) {
 	return make_unique<HPAm>(
 		model,
 		model_i,
-		static_pointer_cast<HPAmModel>(model->m_nodes[model_i])
+		static_cast<HPAmModel*>(model->m_nodes[model_i].get())
 	);
 }
 
 class HPAmView : public HPNodeView {
 public:
 	HPAmView(HPView* view) :
-			m_amt(view, "AM amount")
+			m_amt(new Knob(view, "AM amount"))
 	{
-		m_widgets.emplace_back(&m_amt);
+		m_widgets.emplace_back(m_amt);
 	}
-	void setModel(shared_ptr<HPModel::Node> model) {
-		shared_ptr<HPAmModel> modelCast = static_pointer_cast<HPAmModel>(model);
-		m_amt.setModel(modelCast->m_amt.get());
+	void setModel(HPModel::Node* model) {
+		HPAmModel *modelCast = static_cast<HPAmModel*>(model);
+		m_amt->setModel(&modelCast->m_amt);
 	}
 private:
-	Knob m_amt;
+	Knob *m_amt;
 };
 
 using Definition = HPDefinition<HPAmModel>;
@@ -113,8 +113,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return AM_NAME; }
 
-template<> shared_ptr<HPAmModel> Definition::newNodeImpl() {
-	return make_shared<HPAmModel>(m_instrument);
+template<> unique_ptr<HPAmModel> Definition::newNodeImpl() {
+	return make_unique<HPAmModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {

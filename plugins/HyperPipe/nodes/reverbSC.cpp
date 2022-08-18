@@ -41,48 +41,48 @@ inline unique_ptr<HPNode> instantiateReverbSC(HPModel* model, int model_i);
 struct HPReverbSCModel : public HPModel::Node {
 	HPReverbSCModel(Instrument* instrument) :
 			Node(instrument),
-			m_wd(make_shared<FloatModel>(0.5f, 0.0f, 1.0f, 0.01f, instrument, QString("reverbSC w/d"))),
-			m_dbIn(make_shared<FloatModel>(0.0f, -60.0f, 15.0f, 0.1f, instrument, QString("reverbSC dB in"))),
-			m_size(make_shared<FloatModel>(0.89f, 0.0f, 1.0f, 0.01f, instrument, QString("reverbSC size"))),
-			m_color(make_shared<FloatModel>(10'000.0f, 100.0f, 15'000.0f, 1.0f, instrument, QString("reverbSC color"))),
-			m_dbOut(make_shared<FloatModel>(0.0f, -60.0f, 15.0f, 0.1f, instrument, QString("reverbSC dB out")))
+			m_wd(0.5f, 0.0f, 1.0f, 0.01f, instrument, QString("reverbSC w/d")),
+			m_dbIn(0.0f, -60.0f, 15.0f, 0.1f, instrument, QString("reverbSC dB in")),
+			m_size(0.89f, 0.0f, 1.0f, 0.01f, instrument, QString("reverbSC size")),
+			m_color(10'000.0f, 100.0f, 15'000.0f, 1.0f, instrument, QString("reverbSC color")),
+			m_dbOut(0.0f, -60.0f, 15.0f, 0.1f, instrument, QString("reverbSC dB out"))
 	{}
-	shared_ptr<FloatModel> m_wd;
-	shared_ptr<FloatModel> m_dbIn;
-	shared_ptr<FloatModel> m_size;
-	shared_ptr<FloatModel> m_color;
-	shared_ptr<FloatModel> m_dbOut;
+	FloatModel m_wd;
+	FloatModel m_dbIn;
+	FloatModel m_size;
+	FloatModel m_color;
+	FloatModel m_dbOut;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateReverbSC(model, model_i);
 	}
 	string name() { return REVERB_SC_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_wd->loadSettings(elem, is + "_wd");
-		m_dbIn->loadSettings(elem, is + "_dbIn");
-		m_size->loadSettings(elem, is + "_size");
-		m_color->loadSettings(elem, is + "_color");
-		m_dbOut->loadSettings(elem, is + "_dbOut");
+		m_wd.loadSettings(elem, is + "_wd");
+		m_dbIn.loadSettings(elem, is + "_dbIn");
+		m_size.loadSettings(elem, is + "_size");
+		m_color.loadSettings(elem, is + "_color");
+		m_dbOut.loadSettings(elem, is + "_dbOut");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_wd->saveSettings(doc, elem, is + "_wd");
-		m_dbIn->saveSettings(doc, elem, is + "_dbIn");
-		m_size->saveSettings(doc, elem, is + "_size");
-		m_color->saveSettings(doc, elem, is + "_color");
-		m_dbOut->saveSettings(doc, elem, is + "_dbOut");
+		m_wd.saveSettings(doc, elem, is + "_wd");
+		m_dbIn.saveSettings(doc, elem, is + "_dbIn");
+		m_size.saveSettings(doc, elem, is + "_size");
+		m_color.saveSettings(doc, elem, is + "_color");
+		m_dbOut.saveSettings(doc, elem, is + "_dbOut");
 	}
 };
 
 class HPReverbSC : public HPNode
 {
 public:
-	HPReverbSC(HPModel* model, int model_i, shared_ptr<HPReverbSCModel> nmodel) :
-			m_wd(nmodel->m_wd),
-			m_dbIn(nmodel->m_dbIn),
-			m_size(nmodel->m_size),
-			m_color(nmodel->m_color),
-			m_dbOut(nmodel->m_dbOut),
+	HPReverbSC(HPModel* model, int model_i, HPReverbSCModel* nmodel) :
+			m_wd(&nmodel->m_wd),
+			m_dbIn(&nmodel->m_dbIn),
+			m_size(&nmodel->m_size),
+			m_color(&nmodel->m_color),
+			m_dbOut(&nmodel->m_dbOut),
 			m_prev(model->instantiatePrev(model_i))
 	{
 		sp_create(&m_sp);
@@ -140,11 +140,11 @@ private:
 		sp_dcblock_init(m_sp, m_dcblk[0], Engine::audioEngine()->currentQualitySettings().sampleRateMultiplier());
 		//sp_dcblock_init(m_sp, m_dcblk[1], Engine::audioEngine()->currentQualitySettings().sampleRateMultiplier());
 	}
-	shared_ptr<FloatModel> m_wd;
-	shared_ptr<FloatModel> m_dbIn;
-	shared_ptr<FloatModel> m_size;
-	shared_ptr<FloatModel> m_color;
-	shared_ptr<FloatModel> m_dbOut;
+	FloatModel *m_wd;
+	FloatModel *m_dbIn;
+	FloatModel *m_size;
+	FloatModel *m_color;
+	FloatModel *m_dbOut;
 	unique_ptr<HPNode> m_prev = nullptr;
 	float m_srate_tmp;
 	// Soundpipe C structs like in lmms::ReverbSCEffect
@@ -157,43 +157,43 @@ inline unique_ptr<HPNode> instantiateReverbSC(HPModel* model, int model_i) {
 	return make_unique<HPReverbSC>(
 		model,
 		model_i,
-		static_pointer_cast<HPReverbSCModel>(model->m_nodes[model_i])
+		static_cast<HPReverbSCModel*>(model->m_nodes[model_i].get())
 	);
 }
 
 class HPReverbSCView : public HPNodeView {
 public:
 	HPReverbSCView(HPView* view) :
-			m_wd(view, "reverbSC w/d"),
-			m_dbIn(view, "reverbSC dB in"),
-			m_size(view, "reverbSC size"),
-			m_color(view, "reverbSC color"),
-			m_dbOut(view, "reverbSC dB out")
+			m_wd(new Knob(view, "reverbSC w/d")),
+			m_dbIn(new Knob(view, "reverbSC dB in")),
+			m_size(new Knob(view, "reverbSC size")),
+			m_color(new Knob(view, "reverbSC color")),
+			m_dbOut(new Knob(view, "reverbSC dB out"))
 	{
-		m_widgets.emplace_back(&m_wd);
-		m_dbIn.move(30, 0);
-		m_widgets.emplace_back(&m_dbIn);
-		m_size.move(60, 0);
-		m_widgets.emplace_back(&m_size);
-		m_color.move(90, 0);
-		m_widgets.emplace_back(&m_color);
-		m_dbOut.move(120, 0);
-		m_widgets.emplace_back(&m_dbOut);
+		m_widgets.emplace_back(m_wd);
+		m_dbIn->move(30, 0);
+		m_widgets.emplace_back(m_dbIn);
+		m_size->move(60, 0);
+		m_widgets.emplace_back(m_size);
+		m_color->move(90, 0);
+		m_widgets.emplace_back(m_color);
+		m_dbOut->move(120, 0);
+		m_widgets.emplace_back(m_dbOut);
 	}
-	void setModel(shared_ptr<HPModel::Node> model) {
-		shared_ptr<HPReverbSCModel> modelCast = static_pointer_cast<HPReverbSCModel>(model);
-		m_wd.setModel(modelCast->m_wd.get());
-		m_dbIn.setModel(modelCast->m_dbIn.get());
-		m_size.setModel(modelCast->m_size.get());
-		m_color.setModel(modelCast->m_color.get());
-		m_dbOut.setModel(modelCast->m_dbOut.get());
+	void setModel(HPModel::Node* model) {
+		HPReverbSCModel *modelCast = static_cast<HPReverbSCModel*>(model);
+		m_wd->setModel(&modelCast->m_wd);
+		m_dbIn->setModel(&modelCast->m_dbIn);
+		m_size->setModel(&modelCast->m_size);
+		m_color->setModel(&modelCast->m_color);
+		m_dbOut->setModel(&modelCast->m_dbOut);
 	}
 private:
-	Knob m_wd;
-	Knob m_dbIn;
-	Knob m_size;
-	Knob m_color;
-	Knob m_dbOut;
+	Knob *m_wd;
+	Knob *m_dbIn;
+	Knob *m_size;
+	Knob *m_color;
+	Knob *m_dbOut;
 };
 
 using Definition = HPDefinition<HPReverbSCModel>;
@@ -208,8 +208,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return REVERB_SC_NAME; }
 
-template<> shared_ptr<HPReverbSCModel> Definition::newNodeImpl() {
-	return make_shared<HPReverbSCModel>(m_instrument);
+template<> unique_ptr<HPReverbSCModel> Definition::newNodeImpl() {
+	return make_unique<HPReverbSCModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {

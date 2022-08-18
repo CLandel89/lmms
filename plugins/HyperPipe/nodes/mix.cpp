@@ -35,28 +35,28 @@ inline unique_ptr<HPNode> instantiateMix(HPModel* model, int model_i);
 struct HPMixModel : public HPModel::Node {
 	HPMixModel(Instrument* instrument) :
 			Node(instrument),
-			m_mix(make_shared<FloatModel>(0.0f, 0.0f, 1.0f, 0.01f, instrument, QString("mix")))
+			m_mix(0.0f, 0.0f, 1.0f, 0.01f, instrument, QString("mix"))
 	{}
-	shared_ptr<FloatModel> m_mix;
+	FloatModel m_mix;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateMix(model, model_i);
 	}
 	string name() { return MIX_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_mix->loadSettings(elem, is + "_mix");
+		m_mix.loadSettings(elem, is + "_mix");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_mix->saveSettings(doc, elem, is + "_mix");
+		m_mix.saveSettings(doc, elem, is + "_mix");
 	}
 };
 
 class HPMix : public HPNode
 {
 public:
-	HPMix(HPModel* model, int model_i, shared_ptr<HPMixModel> nmodel) :
-			m_mix(nmodel->m_mix),
+	HPMix(HPModel* model, int model_i, HPMixModel* nmodel) :
+			m_mix(&nmodel->m_mix),
 			m_prev(model->instantiatePrev(model_i)),
 			m_arguments(model->instantiateArguments(model_i))
 	{}
@@ -76,7 +76,7 @@ private:
 		float mix = m_mix->value();
 		return (1 - mix) * prev + mix * args;
 	}
-	shared_ptr<FloatModel> m_mix;
+	FloatModel *m_mix;
 	unique_ptr<HPNode> m_prev;
 	vector<unique_ptr<HPNode>> m_arguments;
 };
@@ -85,23 +85,23 @@ inline unique_ptr<HPNode> instantiateMix(HPModel* model, int model_i) {
 	return make_unique<HPMix>(
 		model,
 		model_i,
-		static_pointer_cast<HPMixModel>(model->m_nodes[model_i])
+		static_cast<HPMixModel*>(model->m_nodes[model_i].get())
 	);
 }
 
 class HPMixView : public HPNodeView {
 public:
 	HPMixView(HPView* view) :
-			m_mix(view, "mix")
+			m_mix(new Knob(view, "mix"))
 	{
-		m_widgets.emplace_back(&m_mix);
+		m_widgets.emplace_back(m_mix);
 	}
-	void setModel(shared_ptr<HPModel::Node> model) {
-		shared_ptr<HPMixModel> modelCast = static_pointer_cast<HPMixModel>(model);
-		m_mix.setModel(modelCast->m_mix.get());
+	void setModel(HPModel::Node *model) {
+		HPMixModel *modelCast = static_cast<HPMixModel*>(model);
+		m_mix->setModel(&modelCast->m_mix);
 	}
 private:
-	Knob m_mix;
+	Knob *m_mix;
 };
 
 using Definition = HPDefinition<HPMixModel>;
@@ -114,8 +114,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return MIX_NAME; }
 
-template<> shared_ptr<HPMixModel> Definition::newNodeImpl() {
-	return make_shared<HPMixModel>(m_instrument);
+template<> unique_ptr<HPMixModel> Definition::newNodeImpl() {
+	return make_unique<HPMixModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {

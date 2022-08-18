@@ -35,28 +35,28 @@ inline unique_ptr<HPNode> instantiateTune(HPModel* model, int model_i);
 struct HPTuneModel : public HPModel::Node {
 	HPTuneModel(Instrument* instrument) :
 			Node(instrument),
-			m_tune(make_shared<FloatModel>(0.0f, -100.0f, 100.0f, 0.01f, instrument, QString("tune")))
+			m_tune(0.0f, -100.0f, 100.0f, 0.01f, instrument, QString("tune"))
 	{}
-	shared_ptr<FloatModel> m_tune;
+	FloatModel m_tune;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateTune(model, model_i);
 	}
 	string name() { return TUNE_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_tune->loadSettings(elem, is + "_tune");
+		m_tune.loadSettings(elem, is + "_tune");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_tune->saveSettings(doc, elem, is + "_tune");
+		m_tune.saveSettings(doc, elem, is + "_tune");
 	}
 };
 
 class HPTune : public HPNode
 {
 public:
-	HPTune(HPModel* model, int model_i, shared_ptr<HPTuneModel> nmodel) :
-			m_tune(nmodel->m_tune),
+	HPTune(HPModel* model, int model_i, HPTuneModel* nmodel) :
+			m_tune(&nmodel->m_tune),
 			m_prev(model->instantiatePrev(model_i))
 	{}
 private:
@@ -68,7 +68,7 @@ private:
 		tune = powf(2.0f, tune / 12.0f);
 		return m_prev->processFrame(tune * freq, srate);
 	}
-	shared_ptr<FloatModel> m_tune;
+	FloatModel *m_tune;
 	unique_ptr<HPNode> m_prev;
 };
 
@@ -76,23 +76,23 @@ inline unique_ptr<HPNode> instantiateTune(HPModel* model, int model_i) {
 	return make_unique<HPTune>(
 		model,
 		model_i,
-		static_pointer_cast<HPTuneModel>(model->m_nodes[model_i])
+		static_cast<HPTuneModel*>(model->m_nodes[model_i].get())
 	);
 }
 
 class HPTuneView : public HPNodeView {
 public:
 	HPTuneView(HPView* view) :
-			m_tune(view, "tune")
+			m_tune(new Knob(view, "tune"))
 	{
-		m_widgets.emplace_back(&m_tune);
+		m_widgets.emplace_back(m_tune);
 	}
-	void setModel(shared_ptr<HPModel::Node> model) {
-		shared_ptr<HPTuneModel> modelCast = static_pointer_cast<HPTuneModel>(model);
-		m_tune.setModel(modelCast->m_tune.get());
+	void setModel(HPModel::Node* model) {
+		HPTuneModel *modelCast = static_cast<HPTuneModel*>(model);
+		m_tune->setModel(&modelCast->m_tune);
 	}
 private:
-	Knob m_tune;
+	Knob *m_tune;
 };
 
 using Definition = HPDefinition<HPTuneModel>;
@@ -107,8 +107,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return TUNE_NAME; }
 
-template<> shared_ptr<HPTuneModel> Definition::newNodeImpl() {
-	return make_shared<HPTuneModel>(m_instrument);
+template<> unique_ptr<HPTuneModel> Definition::newNodeImpl() {
+	return make_unique<HPTuneModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {

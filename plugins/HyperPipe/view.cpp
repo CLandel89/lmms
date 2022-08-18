@@ -33,18 +33,18 @@ inline const int VW = 250, VH = 250;
 HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent),
 		m_instrument(instrument),
-		m_nodeType(this, "node type"),
-		m_pipe(2, this, "pipe"),
-		m_prev(this),
-		m_next(this),
-		m_moveUp(this),
-		m_prepend(this),
-		m_delete(this),
-		m_append(this),
-		m_moveDown(this),
+		m_nodeType(new ComboBox(this, "node type")),
+		m_pipe(new LcdSpinBox(2, this, "pipe")),
+		m_prev(new PixmapButton(this)),
+		m_next(new PixmapButton(this)),
+		m_moveUp(new PixmapButton(this)),
+		m_prepend(new PixmapButton(this)),
+		m_delete(new PixmapButton(this)),
+		m_append(new PixmapButton(this)),
+		m_moveDown(new PixmapButton(this)),
 		m_arguments(this, instrument)
 {
-	auto curNode = instrument->m_model.m_nodes[m_model_i];
+	auto curNode = instrument->m_model.m_nodes[m_model_i].get();
 
 	// node view
 	for (auto& definition : instrument->m_definitions) {
@@ -54,48 +54,48 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		m_nodeViews[definition.second->name()]->hide();
 	}
 	// node type combo box
-	m_nodeType.move(0, 30);
+	m_nodeType->move(0, 30);
 	for (auto& definition : instrument->m_definitions) {
 		m_nodeTypeModel.addItem(QString::fromStdString(definition.first));
 	}
 	connect(&m_nodeTypeModel, SIGNAL(dataChanged()), this, SLOT(sl_chNodeType()));
-	m_nodeType.setModel(&m_nodeTypeModel);
+	m_nodeType->setModel(&m_nodeTypeModel);
 	m_nodeTypeModel.setValue(
 		m_nodeTypeModel.findText(QString::fromStdString(curNode->name()))
 	); //=>call to this->s_chNodeType
 	// node pipe number
-	m_pipe.move(120, 30);
-	m_pipe.setModel(curNode->m_pipe.get());
+	m_pipe->move(120, 30);
+	m_pipe->setModel(&curNode->m_pipe);
 
 	// node move/create/delete buttons
-	m_prev.setActiveGraphic(PLUGIN_NAME::getIconPixmap("prev"));
-	m_prev.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("prev"));
-	m_prev.move(10, 5);
-	connect(&m_prev, SIGNAL(clicked()), this, SLOT(sl_prev()));
-	m_next.setActiveGraphic(PLUGIN_NAME::getIconPixmap("next"));
-	m_next.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("next"));
-	m_next.move(40, 5);
-	connect(&m_next, SIGNAL(clicked()), this, SLOT(sl_next()));
-	m_moveUp.setActiveGraphic(PLUGIN_NAME::getIconPixmap("moveUp"));
-	m_moveUp.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("moveUp"));
-	m_moveUp.move(80, 5);
-	connect(&m_moveUp, SIGNAL(clicked()), this, SLOT(sl_moveUp()));
-	m_prepend.setActiveGraphic(PLUGIN_NAME::getIconPixmap("prepend"));
-	m_prepend.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("prepend"));
-	m_prepend.move(110, 5);
-	connect(&m_prepend, SIGNAL(clicked()), this, SLOT(sl_prepend()));
-	m_delete.setActiveGraphic(PLUGIN_NAME::getIconPixmap("delete"));
-	m_delete.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("delete"));
-	m_delete.move(140, 5);
-	connect(&m_delete, SIGNAL(clicked()), this, SLOT(sl_delete()));
-	m_append.setActiveGraphic(PLUGIN_NAME::getIconPixmap("append"));
-	m_append.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("append"));
-	m_append.move(170, 5);
-	connect(&m_append, SIGNAL(clicked()), this, SLOT(sl_append()));
-	m_moveDown.setActiveGraphic(PLUGIN_NAME::getIconPixmap("moveDown"));
-	m_moveDown.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("moveDown"));
-	m_moveDown.move(200, 5);
-	connect(&m_moveDown, SIGNAL(clicked()), this, SLOT(sl_moveDown()));
+	m_prev->setActiveGraphic(PLUGIN_NAME::getIconPixmap("prev"));
+	m_prev->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("prev"));
+	m_prev->move(10, 5);
+	connect(m_prev, SIGNAL(clicked()), this, SLOT(sl_prev()));
+	m_next->setActiveGraphic(PLUGIN_NAME::getIconPixmap("next"));
+	m_next->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("next"));
+	m_next->move(40, 5);
+	connect(m_next, SIGNAL(clicked()), this, SLOT(sl_next()));
+	m_moveUp->setActiveGraphic(PLUGIN_NAME::getIconPixmap("moveUp"));
+	m_moveUp->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("moveUp"));
+	m_moveUp->move(80, 5);
+	connect(m_moveUp, SIGNAL(clicked()), this, SLOT(sl_moveUp()));
+	m_prepend->setActiveGraphic(PLUGIN_NAME::getIconPixmap("prepend"));
+	m_prepend->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("prepend"));
+	m_prepend->move(110, 5);
+	connect(m_prepend, SIGNAL(clicked()), this, SLOT(sl_prepend()));
+	m_delete->setActiveGraphic(PLUGIN_NAME::getIconPixmap("delete"));
+	m_delete->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("delete"));
+	m_delete->move(140, 5);
+	connect(m_delete, SIGNAL(clicked()), this, SLOT(sl_delete()));
+	m_append->setActiveGraphic(PLUGIN_NAME::getIconPixmap("append"));
+	m_append->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("append"));
+	m_append->move(170, 5);
+	connect(m_append, SIGNAL(clicked()), this, SLOT(sl_append()));
+	m_moveDown->setActiveGraphic(PLUGIN_NAME::getIconPixmap("moveDown"));
+	m_moveDown->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("moveDown"));
+	m_moveDown->move(200, 5);
+	connect(m_moveDown, SIGNAL(clicked()), this, SLOT(sl_moveDown()));
 }
 
 HPView::~HPView() {
@@ -105,16 +105,15 @@ HPView::~HPView() {
 void HPView::sl_chNodeType() {
 	if (m_destructing) { return; }
 	string nodeType = m_nodeTypeModel.currentText().toStdString();
-	auto modelNode = m_instrument->m_model.m_nodes[m_model_i];
+	auto modelNode = m_instrument->m_model.m_nodes[m_model_i].get();
 	if (modelNode->name() != nodeType) {
 		m_instrument->chNodeType(nodeType, m_model_i);
-		modelNode = m_instrument->m_model.m_nodes[m_model_i];
 	}
 	updateNodeView();
 }
 
 void HPView::updateNodeView() {
-	auto modelNode = m_instrument->m_model.m_nodes[m_model_i];
+	auto modelNode = m_instrument->m_model.m_nodes[m_model_i].get();
 	string nodeType = modelNode->name();
 	if (nodeType != m_nodeTypeModel.currentText().toStdString()) {
 		//combo box needs update
@@ -128,7 +127,7 @@ void HPView::updateNodeView() {
 	m_curNode = m_nodeViews[nodeType].get();
 	m_curNode->setModel(modelNode);
 	m_curNode->show();
-	m_pipe.setModel(modelNode->m_pipe.get());
+	m_pipe->setModel(&modelNode->m_pipe);
 	m_arguments.setModel(modelNode);
 }
 
@@ -159,8 +158,8 @@ void HPView::sl_prepend() {
 	if (m_destructing) { return; }
 	auto mnode = m_instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode();
 	auto &nodes = m_instrument->m_model.m_nodes;
-	mnode->m_pipe->setValue(nodes[m_model_i]->m_pipe->value());
-	nodes.insert(nodes.begin() + m_model_i, mnode);
+	mnode->m_pipe.setValue(nodes[m_model_i]->m_pipe.value());
+	nodes.insert(nodes.begin() + m_model_i, std::move(mnode));
 	updateNodeView();
 }
 
@@ -177,8 +176,8 @@ void HPView::sl_append() {
 	if (m_destructing) { return; }
 	auto mnode = m_instrument->m_definitions[HPDefinitionBase::DEFAULT_TYPE]->newNode();
 	auto &nodes = m_instrument->m_model.m_nodes;
-	mnode->m_pipe->setValue(nodes[m_model_i]->m_pipe->value());
-	nodes.insert(nodes.begin() + m_model_i + 1, mnode);
+	mnode->m_pipe.setValue(nodes[m_model_i]->m_pipe.value());
+	nodes.insert(nodes.begin() + m_model_i + 1, std::move(mnode));
 	m_model_i++;
 	updateNodeView();
 }
@@ -194,41 +193,41 @@ void HPView::sl_moveDown() {
 
 HPVArguments::HPVArguments(HPView* view, HPInstrument* instrument) :
 		m_instrument(instrument),
-		m_left(view),
-		m_right(view),
-		m_add(view),
-		m_delete(view)
+		m_left(new PixmapButton(view)),
+		m_right(new PixmapButton(view)),
+		m_add(new PixmapButton(view)),
+		m_delete(new PixmapButton(view))
 {
-	m_add.setActiveGraphic(PLUGIN_NAME::getIconPixmap("plus"));
-	m_add.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("plus"));
-	m_add.move(5, VH - 30);
-	connect(&m_add, SIGNAL(clicked()), this, SLOT(sl_add()));
-	m_delete.setActiveGraphic(PLUGIN_NAME::getIconPixmap("minus"));
-	m_delete.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("minus"));
-	m_delete.move(30, VH - 30);
-	connect(&m_delete, SIGNAL(clicked()), this, SLOT(sl_delete()));
+	m_add->setActiveGraphic(PLUGIN_NAME::getIconPixmap("plus"));
+	m_add->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("plus"));
+	m_add->move(5, VH - 30);
+	connect(m_add, SIGNAL(clicked()), this, SLOT(sl_add()));
+	m_delete->setActiveGraphic(PLUGIN_NAME::getIconPixmap("minus"));
+	m_delete->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("minus"));
+	m_delete->move(30, VH - 30);
+	connect(m_delete, SIGNAL(clicked()), this, SLOT(sl_delete()));
 	const int argw = 35;
 	const int nShown = 4;
-	m_left.setActiveGraphic(PLUGIN_NAME::getIconPixmap("left"));
-	m_left.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("left"));
-	m_left.move(VW - 2 * 25 - nShown * argw, VH - 30);
-	connect(&m_left, SIGNAL(clicked()), this, SLOT(sl_left()));
+	m_left->setActiveGraphic(PLUGIN_NAME::getIconPixmap("left"));
+	m_left->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("left"));
+	m_left->move(VW - 2 * 25 - nShown * argw, VH - 30);
+	connect(m_left, SIGNAL(clicked()), this, SLOT(sl_left()));
 	for (int li = 0; li < nShown; li++) {
-		auto pipe = make_unique<LcdSpinBox>(2, view, "argument");
+		auto pipe = new LcdSpinBox(2, view, "argument");
 		pipe->move(VW + (-nShown + li) * argw - 25, VH - 30);
-		m_pipes.emplace_back(std::move(pipe));
+		m_pipes.emplace_back(pipe);
 	}
-	m_right.setActiveGraphic(PLUGIN_NAME::getIconPixmap("right"));
-	m_right.setInactiveGraphic(PLUGIN_NAME::getIconPixmap("right"));
-	m_right.move(VW - 25, VH - 30);
-	connect(&m_right, SIGNAL(clicked()), this, SLOT(sl_right()));
+	m_right->setActiveGraphic(PLUGIN_NAME::getIconPixmap("right"));
+	m_right->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("right"));
+	m_right->move(VW - 25, VH - 30);
+	connect(m_right, SIGNAL(clicked()), this, SLOT(sl_right()));
 }
 
 HPVArguments::~HPVArguments() {
 	m_destructing = true;
 }
 
-void HPVArguments::setModel(shared_ptr<HPModel::Node> model) {
+void HPVArguments::setModel(HPModel::Node* model) {
 	if (model == m_model) {
 		return;
 	}

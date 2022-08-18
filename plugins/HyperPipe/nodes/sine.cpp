@@ -35,9 +35,9 @@ inline unique_ptr<HPNode> instantiateSine(HPModel* model, int model_i);
 struct HPSineModel : public HPModel::Node {
 	HPSineModel(Instrument* instrument) :
 			Node(instrument),
-			m_sawify(make_shared<FloatModel>(0.0f, 0.0f, 1.0f, 0.01f, instrument, QString("sawify")))
+			m_sawify(0.0f, 0.0f, 1.0f, 0.01f, instrument, QString("sawify"))
 	{}
-	shared_ptr<FloatModel> m_sawify;
+	FloatModel m_sawify;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateSine(model, model_i);
 	}
@@ -46,20 +46,20 @@ struct HPSineModel : public HPModel::Node {
 	}
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_sawify->loadSettings(elem, is + "_sawify");
+		m_sawify.loadSettings(elem, is + "_sawify");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_sawify->saveSettings(doc, elem, is + "_sawify");
+		m_sawify.saveSettings(doc, elem, is + "_sawify");
 	}
 };
 
 class HPSine : public HPOsc
 {
 public:
-	HPSine(HPModel* model, int model_i, shared_ptr<HPSineModel> nmodel) :
+	HPSine(HPModel* model, int model_i, HPSineModel* nmodel) :
 			HPOsc(model, model_i),
-			m_sawify(nmodel->m_sawify)
+			m_sawify(&nmodel->m_sawify)
 	{}
 private:
 	float shape(float ph) {
@@ -75,30 +75,30 @@ private:
 		float attenuate = (1 - sawify) * 0.75f + sawify * 2.3f;
 		return attenuate * s;
 	}
-	shared_ptr<FloatModel> m_sawify;
+	FloatModel* m_sawify;
 };
 
 inline unique_ptr<HPNode> instantiateSine(HPModel* model, int model_i) {
 	return make_unique<HPSine>(
 		model,
 		model_i,
-		static_pointer_cast<HPSineModel>(model->m_nodes[model_i])
+		static_cast<HPSineModel*>(model->m_nodes[model_i].get())
 	);
 }
 
 class HPSineView : public HPNodeView {
 public:
 	HPSineView(HPView* view) :
-			m_sawify(view, "sawify")
+			m_sawify(new Knob(view, "sawify"))
 	{
-		m_widgets.emplace_back(&m_sawify);
+		m_widgets.emplace_back(m_sawify);
 	}
-	void setModel(shared_ptr<HPModel::Node> model) {
-		shared_ptr<HPSineModel> modelCast = static_pointer_cast<HPSineModel>(model);
-		m_sawify.setModel(modelCast->m_sawify.get());
+	void setModel(HPModel::Node* model) {
+		HPSineModel *modelCast = static_cast<HPSineModel*>(model);
+		m_sawify->setModel(&modelCast->m_sawify);
 	}
 private:
-	Knob m_sawify;
+	Knob *m_sawify;
 };
 
 using Definition = HPDefinition<HPSineModel>;
@@ -111,8 +111,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return SINE_NAME; }
 
-template<> shared_ptr<HPSineModel> Definition::newNodeImpl() {
-	return make_shared<HPSineModel>(m_instrument);
+template<> unique_ptr<HPSineModel> Definition::newNodeImpl() {
+	return make_unique<HPSineModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {

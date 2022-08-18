@@ -57,7 +57,7 @@ inline unique_ptr<HPNode> instantiateNoise() { return make_unique<HPNoise>(); }
 class HPNoiseView : public HPNodeView {
 public:
 	HPNoiseView(HPView* view, HPInstrument* instrument) {}
-	void setModel(shared_ptr<HPModel::Node> model) {}
+	void setModel(HPModel::Node *model) {}
 };
 
 using Definition = HPDefinition<HPNoiseModel>;
@@ -72,8 +72,8 @@ template<> Definition::~HPDefinition() = default;
 
 template<> string Definition::name() { return NOISE_NAME; }
 
-template<> shared_ptr<HPNoiseModel> Definition::newNodeImpl() {
-	return make_shared<HPNoiseModel>(m_instrument);
+template<> unique_ptr<HPNoiseModel> Definition::newNodeImpl() {
+	return make_unique<HPNoiseModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {
