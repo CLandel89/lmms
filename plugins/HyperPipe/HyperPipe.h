@@ -88,6 +88,7 @@ public:
 	vector<unique_ptr<HPNode>> instantiateArguments(int i);
 	static unique_ptr<IntModel> newArgument(Instrument* instrument, int i);
 	vector<unique_ptr<Node>> m_nodes;
+	vector<unique_ptr<Node>> m_trashbin; //!< notes being played can still access deleted data models
 };
 
 /**

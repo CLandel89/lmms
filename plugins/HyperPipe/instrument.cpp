@@ -184,6 +184,7 @@ void HPInstrument::chNodeType(string nodeType, int model_i) {
 	for (auto &argument : m_model.m_nodes[model_i]->m_arguments) {
 		arguments.emplace_back(move(argument));
 	}
+	m_model.m_trashbin.emplace_back(move(m_model.m_nodes[model_i]));
 	m_model.m_nodes[model_i] = m_definitions[nodeType]->newNode();
 	m_model.m_nodes[model_i]->m_pipe.setValue(pipe);
 	if (! m_definitions[m_model.m_nodes[model_i]->name()]->forbidsArguments()) {

@@ -291,6 +291,7 @@ void HPView::sl_delete() {
 	if (m_destructing) { return; }
 	auto &nodes = m_instrument->m_model.m_nodes;
 	if (nodes.size() <= 1) { return; }
+	m_instrument->m_model.m_trashbin.emplace_back(std::move(nodes[m_model_i]));
 	nodes.erase(nodes.begin() + m_model_i);
 	if (m_model_i >= nodes.size()) { m_model_i--; }
 	updateNodeView();
