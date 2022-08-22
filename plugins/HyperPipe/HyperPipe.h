@@ -174,6 +174,7 @@ public:
 private:
 	void update();
 	HPInstrument *m_instrument;
+	HPView *m_view;
 	HPModel::Node *m_model = nullptr;
 	int m_pos = 0;
 	vector<LcdSpinBox*> m_pipes;
@@ -195,6 +196,9 @@ class HPView : public InstrumentView //InstrumentViewFixedSize
 public:
 	HPView(HPInstrument* instrument, QWidget* parent);
 	~HPView() override;
+	inline int model_i() { return m_model_i; }
+	void setModel_i(int i);
+	void updateWidgets();
 private:
 	void updateNodeView();
 	map<string, unique_ptr<HPNodeView>> m_nodeViews;
@@ -213,7 +217,8 @@ private:
 	PixmapButton *m_moveDown;
 	HPVArguments m_arguments;
 	bool m_destructing = false;
-
+	class MapWidget;
+	MapWidget *m_map;
 private slots:
 	void sl_chNodeType();
 	void sl_prev();
@@ -223,6 +228,24 @@ private slots:
 	void sl_delete();
 	void sl_append();
 	void sl_moveDown();
+};
+
+class HPView::MapWidget : public QWidget {
+	Q_OBJECT
+public:
+	MapWidget(HPView* parent);
+	~MapWidget() = default;
+	HPView *m_parent;
+	HPModel *m_model = nullptr;
+protected:
+	void mousePressEvent(QMouseEvent* ev) override;
+	void paintEvent(QPaintEvent* ev) override;
+	void wheelEvent(QWheelEvent* ev) override;
+private:
+	map<string, QColor> m_colors;
+	QTimer *m_timer;
+private slots:
+	void sl_update();
 };
 
 } // namespace lmms::gui::hyperpipe

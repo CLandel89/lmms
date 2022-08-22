@@ -25,10 +25,116 @@
 
 #include "HyperPipe.h"
 
+#include <QMouseEvent>
+#include <QPainter>
+#include <QTimer>
+#include <QWheelEvent>
+
 namespace lmms::gui::hyperpipe
 {
 
 inline const int VW = 250, VH = 250;
+
+HPView::MapWidget::MapWidget(HPView* parent) :
+		QWidget(parent),
+		m_parent(parent),
+		m_timer(new QTimer(this))
+{
+	auto &definitions = m_parent->m_instrument->m_definitions;
+	float ph = 0;
+	for (auto &definition : definitions) {
+		QColor c;
+		float ph3 = 3 * fmod(ph, 1.0f / 3);
+		if (ph < 1.0 / 3) {
+			c = QColor((1 - ph3) * 255, ph3 * 255, 0);
+		}
+		else if (ph < 2.0 / 3) {
+			c = QColor(0, (1 - ph3) * 255, ph3 * 255);
+		}
+		else {
+			c = QColor(ph3 * 255, 0, (1 - ph3) * 255);
+		}
+		m_colors[definition.first] = c;
+		ph += 1.0f / definitions.size();
+	}
+	// the LcdSpinBoxes don't signal value changes from the scroll wheel, so...
+	connect(m_timer, SIGNAL(timeout()), this, SLOT(sl_update()));
+	m_timer->start(2000);
+}
+void HPView::MapWidget::mousePressEvent(QMouseEvent* ev) {
+	if (m_model == nullptr) { return; }
+	m_parent->setModel_i(
+		ev->x() * m_model->m_nodes.size() / geometry().width()
+	);
+}
+void HPView::MapWidget::paintEvent(QPaintEvent* ev) {
+	QWidget::paintEvent(ev);
+	if (m_model == nullptr) { return; }
+	QPainter painter(this);
+	float w = geometry().width(), h = geometry().height();
+	float nw = w / m_model->m_nodes.size();
+	int i = m_parent->model_i();
+	painter.fillRect(0, 0, w, h, QColor(0, 0, 0));
+	painter.fillRect(i * nw, 0, nw, h, QColor(128, 128, 128));
+	map<int, int> pipe2y;
+	float nh;
+	{
+		map<int, int> pipe2y_prep;
+		for (auto &node : m_model->m_nodes) {
+			pipe2y_prep[node->m_pipe.value()] = -1;
+		}
+		nh = h / pipe2y_prep.size();
+		pipe2y = pipe2y_prep;
+		float y = 0;
+		for (auto &entry : pipe2y_prep) {
+			pipe2y[entry.first] = y;
+			y += nh;
+		}
+	}
+	int ni = 0;
+	for (auto &node : m_model->m_nodes) {
+		int y = pipe2y[node->m_pipe.value()];
+		QColor c = m_colors[node->name()];
+		painter.fillRect(ni * nw, y, nw, h / pipe2y.size(), c);
+		for (auto &argument : node->m_arguments) {
+			int arg_ni;
+			for (arg_ni = ni - 1; arg_ni >= 0; arg_ni--) {
+				if (m_model->m_nodes[arg_ni]->m_pipe.value() == argument->value()) {
+					break;
+				}
+			}
+			if (arg_ni < 0) {
+				//argument is (currently) invalid
+				continue;
+			}
+			y = pipe2y[argument->value()];
+			painter.fillRect(ni * nw, y, nw / 2, nh, QColor(255, 255, 255));
+			painter.fillRect(
+				(arg_ni + 1) * nw,
+				y + nh / 2,
+				(ni - arg_ni - 1) * nw,
+				1,
+				QColor(255, 255, 255));
+		}
+		ni++;
+	}
+	painter.fillRect(i * nw, 0, nw, 1, QColor(128, 128, 128));
+	painter.fillRect(i * nw, h - 1, nw, 1, QColor(128, 128, 128));
+}
+void HPView::MapWidget::wheelEvent(QWheelEvent* ev) {
+	if (m_model == nullptr) { return; }
+	if (ev->angleDelta().y() > 0 && m_parent->model_i() > 0) {
+		m_parent->setModel_i(m_parent->model_i() - 1);
+		ev->accept();
+	}
+	if (ev->angleDelta().y() < 0 && m_parent->model_i() < m_model->m_nodes.size() - 1) {
+		m_parent->setModel_i(m_parent->model_i() + 1);
+		ev->accept();
+	}
+}
+void HPView::MapWidget::sl_update() {
+	update();
+}
 
 HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent),
@@ -42,8 +148,13 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		m_delete(new PixmapButton(this)),
 		m_append(new PixmapButton(this)),
 		m_moveDown(new PixmapButton(this)),
-		m_arguments(this, instrument)
+		m_arguments(this, instrument),
+		m_map(new MapWidget(this))
 {
+	m_map->m_model = &m_instrument->m_model;
+	m_map->move(0, VH - 50);
+	m_map->resize(VW, 50);
+
 	auto curNode = instrument->m_model.m_nodes[m_model_i].get();
 
 	// node view
@@ -100,6 +211,18 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 
 HPView::~HPView() {
 	m_destructing = true;
+	m_map->m_model = nullptr;
+}
+
+void HPView::setModel_i(int i) {
+	m_model_i = i;
+	updateNodeView();
+	updateWidgets();
+	update();
+}
+
+void HPView::updateWidgets() {
+	m_map->update();
 }
 
 void HPView::sl_chNodeType() {
@@ -129,6 +252,7 @@ void HPView::updateNodeView() {
 	m_curNode->show();
 	m_pipe->setModel(&modelNode->m_pipe);
 	m_arguments.setModel(modelNode);
+	updateWidgets();
 }
 
 void HPView::sl_prev() {
@@ -193,33 +317,35 @@ void HPView::sl_moveDown() {
 
 HPVArguments::HPVArguments(HPView* view, HPInstrument* instrument) :
 		m_instrument(instrument),
+		m_view(view),
 		m_left(new PixmapButton(view)),
 		m_right(new PixmapButton(view)),
 		m_add(new PixmapButton(view)),
 		m_delete(new PixmapButton(view))
 {
+	const int Y = VH - 80;
 	m_add->setActiveGraphic(PLUGIN_NAME::getIconPixmap("plus"));
 	m_add->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("plus"));
-	m_add->move(5, VH - 30);
+	m_add->move(5, Y);
 	connect(m_add, SIGNAL(clicked()), this, SLOT(sl_add()));
 	m_delete->setActiveGraphic(PLUGIN_NAME::getIconPixmap("minus"));
 	m_delete->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("minus"));
-	m_delete->move(30, VH - 30);
+	m_delete->move(30, Y);
 	connect(m_delete, SIGNAL(clicked()), this, SLOT(sl_delete()));
 	const int argw = 35;
 	const int nShown = 4;
 	m_left->setActiveGraphic(PLUGIN_NAME::getIconPixmap("left"));
 	m_left->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("left"));
-	m_left->move(VW - 2 * 25 - nShown * argw, VH - 30);
+	m_left->move(VW - 2 * 25 - nShown * argw, Y);
 	connect(m_left, SIGNAL(clicked()), this, SLOT(sl_left()));
 	for (int li = 0; li < nShown; li++) {
 		auto pipe = new LcdSpinBox(2, view, "argument");
-		pipe->move(VW + (-nShown + li) * argw - 25, VH - 30);
+		pipe->move(VW + (-nShown + li) * argw - 25, Y);
 		m_pipes.emplace_back(pipe);
 	}
 	m_right->setActiveGraphic(PLUGIN_NAME::getIconPixmap("right"));
 	m_right->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("right"));
-	m_right->move(VW - 25, VH - 30);
+	m_right->move(VW - 25, Y);
 	connect(m_right, SIGNAL(clicked()), this, SLOT(sl_right()));
 }
 
@@ -260,6 +386,7 @@ void HPVArguments::update() {
 			m_pipes[li]->hide();
 		}
 	}
+	m_view->updateWidgets();
 }
 
 void HPVArguments::sl_left() {
