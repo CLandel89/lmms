@@ -6,6 +6,7 @@ BUILD_PLUGIN(HyperPipe
 	nodes/amp.cpp
 	nodes/env.cpp
 	nodes/filter.cpp
+	nodes/leveler.cpp
 	nodes/lfo.cpp
 	nodes/fm.cpp
 	nodes/mix.cpp

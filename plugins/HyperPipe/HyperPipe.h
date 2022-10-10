@@ -298,6 +298,7 @@ struct HPAmpModel;
 struct HPEnvModel;
 struct HPFilterModel;
 struct HPFmModel;
+struct HPLevelerModel;
 struct HPLfoModel;
 struct HPMixModel;
 struct HPNoiseModel;
