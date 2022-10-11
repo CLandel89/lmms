@@ -36,7 +36,7 @@ struct HPLevelerModel : public HPModel::Node {
 	HPLevelerModel(Instrument* instrument) :
 			Node(instrument),
 			m_outside(-30.0f, -60.0f, 60.0f, 0.1f, instrument, QString("lvl dB outside")),
-			m_radius(19.0f, 0.5f, 20.0f, 0.1f, instrument, QString("lvl radius")),
+			m_radius(19.0f, 0.5f, 127.0f, 0.1f, instrument, QString("lvl radius")),
 			m_center(0.0f, -69.0f, 58.0f, 0.1f, instrument, QString("lvl center")),
 			m_appDetune(false, instrument, QString("lvl re-apply on detune"))
 	{}
