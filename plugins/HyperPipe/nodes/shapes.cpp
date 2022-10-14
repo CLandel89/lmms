@@ -165,9 +165,13 @@ private:
 			amp = 0.3f + 0.1f * morph;
 			s = sqr2saw(ph, morph);
 		}
-		if (m_smoothstep->value()) {
-			return amp * 2 * hpsstep((s + 1) / 2) - 1;
+		if (! m_smoothstep->value()) {
+			return amp * s;
 		}
+		// with smoothstep:
+		s = (s + 1) / 2; //0.0 <= s <= 1.0
+		s = hpsstep(s);
+		s = -1 + 2 * s; //-1.0 <= s <= 1.0
 		return amp * s;
 	}
 	FloatModel *m_shape;
