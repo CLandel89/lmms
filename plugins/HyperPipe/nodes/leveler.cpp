@@ -76,6 +76,12 @@ public:
 	{}
 private:
 	float amp(float freq) {
+		if (freq < 440 * powf(2, -6)) {
+			//FM can modulate the frequency down to negative values.
+			//If freq is lower than A-2, then assume A-2.
+			//TODO: get freq from the PlayNoteHandle, obsoleting this
+			freq = 440 * powf(2, -6);
+		}
 		float note = 12 * log2f(freq / 440.0f);
 		float db;
 		float dist = abs(note - m_center->value());
