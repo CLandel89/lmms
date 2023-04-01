@@ -76,19 +76,21 @@ public:
 		*/
 		virtual unique_ptr<HPNode> instantiate(HPModel* model, int model_i) = 0;
 		IntModel m_pipe;
+		IntModel m_customPrev;
 		//! "Argument" pipes which mix with or modulate the "current" pipe.
 		vector<unique_ptr<IntModel>> m_arguments;
 		virtual string name() = 0;
 		virtual void load(int model_i, const QDomElement& elem) = 0;
 		virtual void save(int model_i, QDomDocument& doc, QDomElement& elem) = 0;
+		int prevPipe();
+		virtual bool usesPrev() = 0;
 	};
 	//! Instantiates the "previous" node; if there is none, returns nullptr.
 	unique_ptr<HPNode> instantiatePrev(int i);
 	//! Instantiates the "argument" nodes; may be smaller than node->m_arguments, but never contains nullptr.
 	vector<unique_ptr<HPNode>> instantiateArguments(int i);
 	static unique_ptr<IntModel> newArgument(Instrument* instrument, int i);
-	vector<unique_ptr<Node>> m_nodes;
-	vector<unique_ptr<Node>> m_trashbin; //!< notes being played can still access deleted data models
+	vector<shared_ptr<Node>> m_nodes; // shared ptr: notes being played can still access potentially removed data models
 };
 
 /**
@@ -97,21 +99,37 @@ public:
 class HPNode
 {
 public:
+	struct Params {
+		float freq, freqMod, srate, ph;
+	};
 	virtual ~HPNode() = default;
-	virtual float processFrame(float freq, float srate) = 0;
+	virtual float processFrame(Params p) = 0;
+	virtual void resetState();
+};
+
+struct HPOscModel : public HPModel::Node {
+	HPOscModel(Instrument* instrument);
+	virtual ~HPOscModel() = default;
+	virtual void load(int model_i, const QDomElement& elem);
+	virtual void loadImpl(int model_i, const QDomElement& elem) = 0;
+	virtual void save(int model_i, QDomDocument& doc, QDomElement& elem);
+	virtual void saveImpl(int model_i, QDomDocument& doc, QDomElement& elem) = 0;
+	virtual bool usesPrev();
+	FloatModel m_ph;
 };
 
 class HPOsc : public HPNode
 {
 public:
-	HPOsc(HPModel* model, int model_i);
+	HPOsc(HPModel* model, int model_i, shared_ptr<HPOscModel> nmodel);
 	virtual ~HPOsc() = default;
-	float processFrame(float freq, float srate);
+	float processFrame(Params p);
+	void resetState() override;
 private:
+	shared_ptr<HPOscModel> m_nmodel;
 	unique_ptr<HPNode> m_prev;
 	vector<unique_ptr<HPNode>> m_arguments;
 	virtual float shape(float ph) = 0;
-	float m_ph = 0.0f;
 };
 
 class HPInstrument;
@@ -126,6 +144,7 @@ public:
 	HPSynth(HPInstrument* instrument, NotePlayHandle* nph, HPModel* model);
 	array<float,2> processFrame(float freq, float srate);
 private:
+	float m_ph = 0.0f;
 	HPInstrument *m_instrument;
 	NotePlayHandle *m_nph;
 	unique_ptr<HPNode> m_lastNode;
@@ -162,7 +181,7 @@ public:
 	void hide();
 	void moveRel(int x, int y);
 	void show();
-	virtual void setModel(HPModel::Node* model) = 0;
+	virtual void setModel(weak_ptr<HPModel::Node> nmodel) = 0;
 	vector<QWidget*> m_widgets; //!< for "show/hide" and "move"
 };
 
@@ -171,12 +190,12 @@ class HPVArguments : QObject {
 public:
 	HPVArguments(HPView* view, HPInstrument* instrument);
 	~HPVArguments();
-	void setModel(HPModel::Node* model);
+	void setModel(weak_ptr<HPModel::Node> nmodel);
 private:
 	void update();
 	HPInstrument *m_instrument;
 	HPView *m_view;
-	HPModel::Node *m_model = nullptr;
+	weak_ptr<HPModel::Node> m_nmodel;
 	int m_pos = 0;
 	vector<LcdSpinBox*> m_pipes;
 	PixmapButton *m_left;
@@ -206,9 +225,11 @@ private:
 	HPNodeView *m_curNode = nullptr;
 	HPInstrument *m_instrument;
 	int m_model_i = 0;
+	Knob* m_ph;
 	ComboBox *m_nodeType;
 	ComboBoxModel m_nodeTypeModel;
 	LcdSpinBox *m_pipe;
+	LcdSpinBox *m_customPrev;
 	PixmapButton *m_prev;
 	PixmapButton *m_next;
 	PixmapButton *m_moveUp;
@@ -316,7 +337,7 @@ struct HPTuneModel;
 // any ad-hoc utilities
 namespace lmms::hyperpipe {
 
-inline float hpposmodf(float a, float b) {
+inline float hpposmodf(float a, float b = 1) {
 	return fmod(fmod(a, b) + b, b);
 }
 inline float hpposmodi(int a, int b) {

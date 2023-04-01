@@ -35,11 +35,13 @@ inline unique_ptr<HPNode> instantiateLeveler(HPModel* model, int model_i);
 struct HPLevelerModel : public HPModel::Node {
 	HPLevelerModel(Instrument* instrument) :
 			Node(instrument),
+			m_inside(0.0f, -60.0f, 60.0f, 0.1f, instrument, QString("lvl dB inside")),
 			m_outside(-30.0f, -60.0f, 60.0f, 0.1f, instrument, QString("lvl dB outside")),
 			m_radius(19.0f, 0.5f, 127.0f, 0.1f, instrument, QString("lvl radius")),
 			m_center(0.0f, -69.0f, 58.0f, 0.1f, instrument, QString("lvl center")),
-			m_appDetune(false, instrument, QString("lvl re-apply on detune"))
+			m_appDetune(true, instrument, QString("lvl re-apply on detune"))
 	{}
+	FloatModel m_inside;
 	FloatModel m_outside;
 	FloatModel m_radius;
 	FloatModel m_center;
@@ -50,6 +52,7 @@ struct HPLevelerModel : public HPModel::Node {
 	string name() { return LEVELER_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
+		m_inside.loadSettings(elem, is + "_inside");
 		m_outside.loadSettings(elem, is + "_outside");
 		m_radius.loadSettings(elem, is + "_radius");
 		m_center.loadSettings(elem, is + "_center");
@@ -57,68 +60,70 @@ struct HPLevelerModel : public HPModel::Node {
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
+		m_inside.saveSettings(doc, elem, is + "_inside");
 		m_outside.saveSettings(doc, elem, is + "_outside");
 		m_radius.saveSettings(doc, elem, is + "_radius");
 		m_center.saveSettings(doc, elem, is + "_center");
 		m_appDetune.saveSettings(doc, elem, is + "_appDetune");
 	}
+	bool usesPrev() { return true; }
 };
 
 class HPLeveler : public HPNode
 {
 public:
-	HPLeveler(HPModel* model, int model_i, HPLevelerModel* nmodel) :
-			m_outside(&nmodel->m_outside),
-			m_radius(&nmodel->m_radius),
-			m_center(&nmodel->m_center),
-			m_appDetune(&nmodel->m_appDetune),
+	HPLeveler(HPModel* model, int model_i, shared_ptr<HPLevelerModel> nmodel) :
+			m_nmodel(nmodel),
 			m_prev(model->instantiatePrev(model_i))
 	{}
 private:
 	float amp(float freq) {
-		if (freq < 440 * powf(2, -6)) {
-			//FM can modulate the frequency down to negative values.
-			//If freq is lower than A-2, then assume A-2.
-			//TODO: get freq from the PlayNoteHandle, obsoleting this
-			freq = 440 * powf(2, -6);
-		}
 		float note = 12 * log2f(freq / 440.0f);
 		float db;
-		float dist = abs(note - m_center->value());
-		dist /= m_radius->value();
+		float center = m_nmodel->m_center.value();
+		float dist = abs(note - center);
+		dist /= m_nmodel->m_radius.value();
 		if (dist > 1) {
-			db = m_outside->value();
+			db = m_nmodel->m_outside.value();
 		}
 		else {
 			float interp = hpsstep(dist);
-			db = (1 - interp) * 0.0f + interp * m_outside->value();
+			float a = m_nmodel->m_inside.value();
+			float b = m_nmodel->m_outside.value();
+			db = (1 - interp) * a + interp * b;
 		}
 		return powf(10.0f, db / 20);
 	}
-	float processFrame(float freq, float srate) {
+	float processFrame(Params p) {
 		if (m_prev == nullptr) {
 			return 0.0f;
 		}
 		float a;
-		if (m_appDetune->value()) {
-			a = amp(freq);
+		if (m_nmodel->m_appDetune.value()) {
+			// re-apply on detune
+			a = amp(p.freq);
 			m_ampValid = false;
 		}
 		else {
+			// apply once and keep as m_amp
 			if (m_ampValid) {
 				a = m_amp;
 			}
 			else {
-				a = m_amp = amp(freq);
+				a = m_amp = amp(p.freq);
 				m_ampValid = true;
 			}
 		}
-		return a * m_prev->processFrame(freq, srate);
+		return a * m_prev->processFrame(p);
 	}
-	FloatModel *m_outside;
-	FloatModel *m_radius;
-	FloatModel *m_center;
-	BoolModel *m_appDetune;
+	void resetState() override {
+		HPNode::resetState();
+		if (m_prev != nullptr) {
+			m_prev->resetState();
+		}
+		m_ampValid = false;
+	}
+	shared_ptr<HPLevelerModel> m_nmodel;
 	unique_ptr<HPNode> m_prev = nullptr;
 	float m_amp = 0;
 	bool m_ampValid = false;
@@ -128,34 +133,39 @@ inline unique_ptr<HPNode> instantiateLeveler(HPModel* model, int model_i) {
 	return make_unique<HPLeveler>(
 		model,
 		model_i,
-		static_cast<HPLevelerModel*>(model->m_nodes[model_i].get())
+		static_pointer_cast<HPLevelerModel>(model->m_nodes[model_i])
 	);
 }
 
 class HPLevelerView : public HPNodeView {
 public:
 	HPLevelerView(HPView* view) :
+			m_inside(new Knob(view, "dB (inside radius)")),
 			m_outside(new Knob(view, "dB (outside radius)")),
 			m_radius(new Knob(view, "radius (halftones)")),
 			m_center(new Knob(view, "center (halftones from A4)")),
 			m_appDetune(new LedCheckBox(view, "re-apply on detune"))
 	{
+		m_widgets.emplace_back(m_inside);
+		m_outside->move(30, 0);
 		m_widgets.emplace_back(m_outside);
-		m_radius->move(30, 0);
+		m_radius->move(60, 0);
 		m_widgets.emplace_back(m_radius);
-		m_center->move(60, 0);
+		m_center->move(90, 0);
 		m_widgets.emplace_back(m_center);
-		m_appDetune->move(90, 0);
+		m_appDetune->move(120, 0);
 		m_widgets.emplace_back(m_appDetune);
 	}
-	void setModel(HPModel::Node* model) {
-		HPLevelerModel* modelCast = static_cast<HPLevelerModel*>(model);
+	void setModel(weak_ptr<HPModel::Node> nmodel) {
+		auto modelCast = static_cast<HPLevelerModel*>(nmodel.lock().get());
+		m_inside->setModel(&modelCast->m_inside);
 		m_outside->setModel(&modelCast->m_outside);
 		m_radius->setModel(&modelCast->m_radius);
 		m_center->setModel(&modelCast->m_center);
 		m_appDetune->setModel(&modelCast->m_appDetune);
 	}
 private:
+	Knob *m_inside;
 	Knob *m_outside;
 	Knob *m_radius;
 	Knob *m_center;

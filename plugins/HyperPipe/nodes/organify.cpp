@@ -54,14 +54,16 @@ struct HPOrganifyModel : public HPModel::Node {
 		m_tones.saveSettings(doc, elem, is + "_tones");
 		m_weaken.saveSettings(doc, elem, is + "_weaken");
 	}
+	bool usesPrev() { return true; }
 };
 
 class HPOrganify : public HPNode
 {
 public:
-	HPOrganify(HPModel* model, int model_i, HPOrganifyModel* nmodel) :
+	HPOrganify(HPModel* model, int model_i, shared_ptr<HPOrganifyModel> nmodel) :
+			m_nmodel(nmodel),
 			m_tones(nmodel->m_tones.value()),
-			m_weaken(&nmodel->m_weaken),
+			m_ph(m_tones + 1 + m_tones),
 			m_prev(m_tones + 1 + m_tones)
 	{
 		for (int t = 0; t < m_tones + 1 + m_tones; t++) {
@@ -69,32 +71,65 @@ public:
 		}
 	}
 private:
-	float processFrame(float freq, float srate) {
+	float processFrame(Params p) {
 		if (m_prev[0] == nullptr) {
 			return 0.0f;
 		}
+		if (! m_ph_initted) {
+			for (int i = 0; i < m_tones + 1 + m_tones; i++) {
+				m_ph[i] = p.ph;
+			}
+			m_ph_initted = true;
+		}
+		float weaken = m_nmodel->m_weaken.value();
 		float sumWeights = 0.0f;
 		float result = 0.0f;
-		for (int sub = 0; sub < m_tones; sub++) {
-			float r = 2.0f / (3.0f + float(sub));
+		for (float sub = 0; sub < m_tones; sub++) {
+			Params ps = p;
+			float r = 2.0f / (3.0f + sub);
+			// re-calculate ps.ph, adapt ps.freq, ps.freqMod and m_ph
+			ps.freq *= r;
+			ps.freqMod *= r;
+			ps.ph = m_ph[sub];
+			m_ph[sub] += ps.freqMod / ps.srate;
+			m_ph[sub] = hpposmodf(m_ph[sub]);
 			float w = 1.0f - float(sub + 1) / (m_tones + 1);
-			w = powf(w, m_weaken->value());
+			w = powf(w, weaken);
 			sumWeights += w;
-			result += w * m_prev[sub]->processFrame(r * freq, srate);
+			result += w * m_prev[sub]->processFrame(ps);
 		}
+		p.ph = m_ph[m_tones]; // consistent with the sub and over tones
+		m_ph[m_tones] += p.freqMod / p.srate;
+		m_ph[m_tones] = hpposmodf(m_ph[m_tones]);
 		sumWeights += 1.0f;
-		result += m_prev[m_tones]->processFrame(freq, srate);
-		for (int over = 0; over < m_tones; over++) {
-			float r = (3.0f + float(over)) / 2.0f;
-			float w = 1.0f - float(over + 1) / (m_tones + 1);
-			w = powf(w, m_weaken->value());
+		result += m_prev[m_tones]->processFrame(p);
+		for (float over = 0; over < m_tones; over++) {
+			Params po = p;
+			float r = (3.0f + over) / 2.0f;
+			// re-calculate po.ph, adapt po.freq, po.freqMod and m_ph
+			po.freq *= r;
+			po.freqMod *= r;
+			po.ph = m_ph[m_tones + 1 + over];
+			m_ph[m_tones + 1 + over] += po.freqMod / po.srate;
+			m_ph[m_tones + 1 + over] = hpposmodf(m_ph[m_tones + 1 + over]);
+			float w = 1.0f - (over + 1.0f) / (m_tones + 1);
+			w = powf(w, weaken);
 			sumWeights += w;
-			result += w * m_prev[m_tones + 1 + over]->processFrame(r * freq, srate);
+			result += w * m_prev[m_tones + 1 + over]->processFrame(po);
 		}
 		return result / sumWeights;
 	}
+	void resetState() override {
+		HPNode::resetState();
+		m_ph_initted = false;
+		for (auto &prev : m_prev) {
+			prev->resetState();
+		}
+	}
+	shared_ptr<HPOrganifyModel> m_nmodel;
 	int m_tones;
-	FloatModel *m_weaken;
+	vector<float> m_ph;
+	bool m_ph_initted = false;
 	vector<unique_ptr<HPNode>> m_prev;
 };
 
@@ -102,7 +137,7 @@ inline unique_ptr<HPNode> instantiateOrganify(HPModel* model, int model_i) {
 	return make_unique<HPOrganify>(
 		model,
 		model_i,
-		static_cast<HPOrganifyModel*>(model->m_nodes[model_i].get())
+		static_pointer_cast<HPOrganifyModel>(model->m_nodes[model_i])
 	);
 }
 
@@ -116,8 +151,8 @@ public:
 		m_weaken->move(25, 0);
 		m_widgets.emplace_back(m_weaken);
 	}
-	void setModel(HPModel::Node *model) {
-		HPOrganifyModel *modelCast = static_cast<HPOrganifyModel*>(model);
+	void setModel(weak_ptr<HPModel::Node> nmodel) {
+		auto modelCast = static_cast<HPOrganifyModel*>(nmodel.lock().get());
 		m_tones->setModel(&modelCast->m_tones);
 		m_weaken->setModel(&modelCast->m_weaken);
 	}

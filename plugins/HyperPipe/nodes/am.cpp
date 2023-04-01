@@ -50,32 +50,43 @@ struct HPAmModel : public HPModel::Node {
 		QString is = "n" + QString::number(model_i);
 		m_amt.saveSettings(doc, elem, is + "_amt");
 	}
+	bool usesPrev() { return true; }
 };
 
 class HPAm : public HPNode
 {
 public:
-	HPAm(HPModel* model, int model_i, HPAmModel* nmodel) :
-			m_amt(&nmodel->m_amt),
+	HPAm(HPModel* model, int model_i, shared_ptr<HPAmModel> nmodel) :
+			m_nmodel(nmodel),
 			m_prev(model->instantiatePrev(model_i)),
 			m_arguments(model->instantiateArguments(model_i))
 	{}
 private:
-	float processFrame(float freq, float srate) {
+	float processFrame(Params p) {
 		if (m_prev == nullptr) {
 			return 0.0f;
 		}
-		float result = m_prev->processFrame(freq, srate);
+		float result = m_prev->processFrame(p);
 		for (auto &argument : m_arguments) {
-			float a = argument->processFrame(freq, srate); //1.0...-1.0
-			a = (a + 1) / 2; //1.0...0.0
-			float amt = m_amt->value();
-			a = (1.0f - amt) +  amt * a;
+			float a = argument->processFrame(p); // -1.0...1.0
+			a += 1.0f; // 0.0...2.0
+			a /= 2.0f; // 0.0...1.0
+			float amt = m_nmodel->m_amt.value();
+			a = (1.0f - amt) +  amt * a; // (1.0-amt)...1.0
 			result *= a;
 		}
 		return result;
 	}
-	FloatModel* m_amt;
+	void resetState() override {
+		HPNode::resetState();
+		if (m_prev != nullptr) {
+			m_prev->resetState();
+		}
+		for (auto &argument : m_arguments) {
+			argument->resetState();
+		}
+	}
+	shared_ptr<HPAmModel> m_nmodel;
 	unique_ptr<HPNode> m_prev;
 	vector<unique_ptr<HPNode>> m_arguments;
 };
@@ -84,7 +95,7 @@ inline unique_ptr<HPNode> instantiateAm(HPModel* model, int model_i) {
 	return make_unique<HPAm>(
 		model,
 		model_i,
-		static_cast<HPAmModel*>(model->m_nodes[model_i].get())
+		static_pointer_cast<HPAmModel>(model->m_nodes[model_i])
 	);
 }
 
@@ -95,8 +106,8 @@ public:
 	{
 		m_widgets.emplace_back(m_amt);
 	}
-	void setModel(HPModel::Node* model) {
-		HPAmModel *modelCast = static_cast<HPAmModel*>(model);
+	void setModel(weak_ptr<HPModel::Node> nmodel) {
+		auto modelCast = static_cast<HPAmModel*>(nmodel.lock().get());
 		m_amt->setModel(&modelCast->m_amt);
 	}
 private:

@@ -50,30 +50,52 @@ struct HPFmModel : public HPModel::Node {
 		QString is = "n" + QString::number(model_i);
 		m_amp.saveSettings(doc, elem, is + "_amp");
 	}
+	bool usesPrev() { return true; }
 };
 
 class HPFm : public HPNode
 {
 public:
-	HPFm(HPModel* model, int model_i, HPFmModel* nmodel) :
-			m_amp(&nmodel->m_amp),
+	HPFm(HPModel* model, int model_i, shared_ptr<HPFmModel> nmodel) :
+			m_nmodel(nmodel),
 			m_prev(model->instantiatePrev(model_i)),
 			m_arguments(model->instantiateArguments(model_i))
 	{}
 private:
-	float processFrame(float freq, float srate) {
+	float processFrame(Params p) {
 		if (m_prev == nullptr) {
 			return 0.0f;
 		}
+		if (! m_ph_valid) {
+			m_ph = p.ph;
+			m_ph_valid = true;
+		}
+		// determine modulation amount
 		float mod = 0.0f;
 		for (auto &argument : m_arguments) {
-			mod += argument->processFrame(freq, srate);
+			mod += argument->processFrame(p);
 		}
-		mod *= m_amp->value();
-		float prevFreq = (mod + 1.0f) * freq;
-		return m_prev->processFrame(prevFreq, srate);
+		mod *= m_nmodel->m_amp.value();
+		// calculate own phase, adapt p.freqMod
+		p.ph = m_ph;
+		p.freqMod *= 1 + mod;
+		m_ph += p.freqMod / p.srate;
+		m_ph = hpposmodf(m_ph);
+		return m_prev->processFrame(p);
 	}
-	FloatModel *m_amp;
+	void resetState() override {
+		HPNode::resetState();
+		if (m_prev != nullptr) {
+			m_prev->resetState();
+		}
+		for (auto &argument : m_arguments) {
+			argument->resetState();
+		}
+		m_ph_valid = false;
+	}
+	float m_ph;
+	bool m_ph_valid = false;
+	shared_ptr<HPFmModel> m_nmodel;
 	unique_ptr<HPNode> m_prev;
 	vector<unique_ptr<HPNode>> m_arguments;
 };
@@ -82,7 +104,7 @@ inline unique_ptr<HPNode> instantiateFm(HPModel* model, int model_i) {
 	return make_unique<HPFm>(
 		model,
 		model_i,
-		static_cast<HPFmModel*>(model->m_nodes[model_i].get())
+		static_pointer_cast<HPFmModel>(model->m_nodes[model_i])
 	);
 }
 
@@ -93,8 +115,8 @@ public:
 	{
 		m_widgets.emplace_back(m_amp);
 	}
-	void setModel(HPModel::Node *model) {
-		HPFmModel* modelCast = static_cast<HPFmModel*>(model);
+	void setModel(weak_ptr<HPModel::Node> nmodel) {
+		auto modelCast = static_cast<HPFmModel*>(nmodel.lock().get());
 		m_amp->setModel(&modelCast->m_amp);
 	}
 private:

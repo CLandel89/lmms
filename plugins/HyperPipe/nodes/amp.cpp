@@ -54,26 +54,33 @@ struct HPAmpModel : public HPModel::Node {
 		m_amp.saveSettings(doc, elem, is + "_amp");
 		m_db.saveSettings(doc, elem, is + "_db");
 	}
+	bool usesPrev() { return true; }
 };
 
 class HPAmp : public HPNode
 {
 public:
-	HPAmp(HPModel* model, int model_i, HPAmpModel* nmodel) :
-			m_amp(&nmodel->m_amp),
-			m_db(&nmodel->m_db),
+	HPAmp(HPModel* model, int model_i, shared_ptr<HPAmpModel> nmodel) :
+			m_nmodel(nmodel),
 			m_prev(model->instantiatePrev(model_i))
 	{}
 private:
-	float processFrame(float freq, float srate) {
+	float processFrame(Params p) {
 		if (m_prev == nullptr) {
 			return 0.0f;
 		}
-		float a = m_amp->value() * powf(10.0f, m_db->value() / 20);
-		return a * m_prev->processFrame(freq, srate);
+		float amp = m_nmodel->m_amp.value();
+		float db = m_nmodel->m_db.value();
+		float a = amp * powf(10.0f, db / 20);
+		return a * m_prev->processFrame(p);
 	}
-	FloatModel *m_amp;
-	FloatModel *m_db;
+	void resetState() override {
+		HPNode::resetState();
+		if (m_prev != nullptr) {
+			m_prev->resetState();
+		}
+	}
+	shared_ptr<HPAmpModel> m_nmodel;
 	unique_ptr<HPNode> m_prev = nullptr;
 };
 
@@ -81,7 +88,7 @@ inline unique_ptr<HPNode> instantiateAmp(HPModel* model, int model_i) {
 	return make_unique<HPAmp>(
 		model,
 		model_i,
-		static_cast<HPAmpModel*>(model->m_nodes[model_i].get())
+		static_pointer_cast<HPAmpModel>(model->m_nodes[model_i])
 	);
 }
 
@@ -95,8 +102,8 @@ public:
 		m_db->move(30, 0);
 		m_widgets.emplace_back(m_db);
 	}
-	void setModel(HPModel::Node* model) {
-		HPAmpModel* modelCast = static_cast<HPAmpModel*>(model);
+	void setModel(weak_ptr<HPModel::Node> model) {
+		auto modelCast = static_cast<HPAmpModel*>(model.lock().get());
 		m_amp->setModel(&modelCast->m_amp);
 		m_db->setModel(&modelCast->m_db);
 	}

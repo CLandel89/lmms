@@ -118,6 +118,7 @@ void HPInstrument::saveSettings(QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(i);
 		auto& node = m_model.m_nodes[i];
 		node->m_pipe.saveSettings(doc, elem, is + "_pipe");
+		node->m_customPrev.saveSettings(doc, elem, is + "_customPrev");
 		IntModel nameHash(hphash(node->name()), INT16_MIN, INT16_MAX);
 		nameHash.saveSettings(doc, elem, is + "_type");
 		auto& arguments = node->m_arguments;
@@ -160,6 +161,7 @@ void HPInstrument::loadSettings(const QDomElement& elem) {
 		}
 		auto& node = m_model.m_nodes.back();
 		node->m_pipe.loadSettings(elem, is + "_pipe");
+		node->m_customPrev.loadSettings(elem, is + "_customPrev");
 		IntModel argumentsSize(0, 0, 9999);
 		argumentsSize.loadSettings(elem, is + "_arguments_size");
 		auto& arguments = node->m_arguments;
@@ -181,13 +183,14 @@ void HPInstrument::chNodeType(string nodeType, int model_i) {
 		return;
 	}
 	int pipe = m_model.m_nodes[model_i]->m_pipe.value();
+	int customPrev = m_model.m_nodes[model_i]->m_customPrev.value();
 	vector<unique_ptr<IntModel>> arguments;
 	for (auto &argument : m_model.m_nodes[model_i]->m_arguments) {
 		arguments.emplace_back(move(argument));
 	}
-	m_model.m_trashbin.emplace_back(move(m_model.m_nodes[model_i]));
 	m_model.m_nodes[model_i] = m_definitions[nodeType]->newNode();
 	m_model.m_nodes[model_i]->m_pipe.setValue(pipe);
+	m_model.m_nodes[model_i]->m_customPrev.setValue(customPrev);
 	if (! m_definitions[m_model.m_nodes[model_i]->name()]->forbidsArguments()) {
 		for (auto &argument : arguments) {
 			m_model.m_nodes[model_i]->m_arguments.emplace_back(move(argument));

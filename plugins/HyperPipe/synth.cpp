@@ -28,25 +28,39 @@
 namespace lmms::hyperpipe
 {
 
-HPOsc::HPOsc(HPModel* model, int model_i) :
+void HPNode::resetState() {}
+
+HPOsc::HPOsc(HPModel* model, int model_i, shared_ptr<HPOscModel> nmodel) :
+		m_nmodel(nmodel),
 		m_arguments(model->instantiateArguments(model_i))
 {}
 
-float HPOsc::processFrame(float freq, float srate) {
-	float result = shape(m_ph);
+float HPOsc::processFrame(Params p) {
+	float ph = 0;
 	if (m_arguments.empty()) {
-		m_ph += freq / srate;
+		// synthesize shape as is
+		ph = p.ph;
 	}
 	else {
-		m_ph = 0;
+		// mix audio of all "arguments"
 		for (auto &argument : m_arguments) {
-			m_ph += argument->processFrame(freq, srate);
+			ph += argument->processFrame(p);
 		}
-		m_ph /= m_arguments.size();
-		m_ph = 1 - 2 * m_ph;
+		// amp the audio signal, if multiple "arguments"
+		ph /= m_arguments.size();
+		// translate the audio signal into the "phase" range (0...1)
+		ph = (ph + 1) / 2;
 	}
-	m_ph = absFraction(m_ph);
-	return result;
+	ph += m_nmodel->m_ph.value() / 360.0f;
+	ph = hpposmodf(ph);
+	return shape(ph);
+}
+
+void HPOsc::resetState() {
+	HPNode::resetState();
+	for (auto &argument : m_arguments) {
+		argument->resetState();
+	}
 }
 
 HPSynth::HPSynth(HPInstrument* instrument, NotePlayHandle* nph, HPModel* model) :
@@ -63,7 +77,14 @@ array<float,2> HPSynth::processFrame(float freq, float srate) {
 	if (m_lastNode == nullptr) {
 		return {0.0f, 0.0f};
 	}
-	float f = m_lastNode->processFrame(freq, srate);
+	float f = m_lastNode->processFrame(HPNode::Params {
+		freq: freq,
+		freqMod: freq,
+		srate: srate,
+		ph: m_ph,
+	});
+	m_ph += freq / srate;
+	m_ph = hpposmodf(m_ph);
 	return {f, f};
 }
 

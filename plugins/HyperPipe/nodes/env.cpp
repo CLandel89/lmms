@@ -42,7 +42,8 @@ struct HPEnvModel : public HPModel::Node {
 			m_att(0.03f, 0.0f, 5.0f, 0.001f, instrument, QString("attack")),
 			m_hold(0.00f, 0.0f, 5.0f, 0.001f, instrument, QString("hold")),
 			m_dec(1.0f, 0.0f, 5.0f, 0.001f, instrument, QString("decay")),
-			m_sus(0.5f, 0.0f, 1.0f, 0.01f, instrument, QString("sustain"))
+			m_sus(0.5f, 0.0f, 1.0f, 0.01f, instrument, QString("sustain")),
+			m_smooth(false, instrument, QString("smooth"))
 	{}
 	FloatModel m_amt;
 	FloatModel m_exp;
@@ -52,6 +53,7 @@ struct HPEnvModel : public HPModel::Node {
 	FloatModel m_hold;
 	FloatModel m_dec;
 	FloatModel m_sus;
+	BoolModel m_smooth;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateEnv(model, model_i);
 	}
@@ -66,6 +68,7 @@ struct HPEnvModel : public HPModel::Node {
 		m_hold.loadSettings(elem, is + "_hold");
 		m_dec.loadSettings(elem, is + "_dec");
 		m_sus.loadSettings(elem, is + "_sus");
+		m_smooth.loadSettings(elem, is + "_smooth");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
@@ -77,71 +80,73 @@ struct HPEnvModel : public HPModel::Node {
 		m_hold.saveSettings(doc, elem, is + "_hold");
 		m_dec.saveSettings(doc, elem, is + "_dec");
 		m_sus.saveSettings(doc, elem, is + "_sus");
+		m_smooth.saveSettings(doc, elem, is + "_smooth");
 	}
+	bool usesPrev() { return true; }
 };
 
 class HPEnv : public HPNode
 {
 public:
-	HPEnv(HPModel* model, int model_i, HPEnvModel* nmodel) :
-			m_amt(&nmodel->m_amt),
-			m_exp(&nmodel->m_exp),
-			m_stretch(&nmodel->m_stretch),
-			m_del(&nmodel->m_del),
-			m_att(&nmodel->m_att),
-			m_hold(&nmodel->m_hold),
-			m_dec(&nmodel->m_dec),
-			m_sus(&nmodel->m_sus),
+	HPEnv(HPModel* model, int model_i, shared_ptr<HPEnvModel> nmodel) :
+			m_nmodel(nmodel),
 			m_prev(model->instantiatePrev(model_i))
 	{}
 private:
-	float processFrame(float freq, float srate) {
-		float stretchL = powf(440.0f / freq, m_stretch->value());
-		float del = stretchL * m_del->value();
-		float att = stretchL * m_att->value();
-		float hold = stretchL * m_hold->value();
-		float dec = stretchL * m_dec->value();
-		float sus = m_sus->value();
-		float a = 1;
-		if (m_state < del) {
-			a = 0;
+	float transform(float amp) {
+		if (m_nmodel->m_smooth.value()) {
+			amp = hpsstep(amp);
 		}
-		else if (m_state < del + att) {
-			a = (m_state - del) / att;
-			a = powf(a, m_exp->value());
-		}
-		else if (m_state < del + att + hold) {
-			//a = 1
-		}
-		else if (m_state < del + att + hold + dec) {
-			a = 1 - (m_state - del - att - hold) / dec;
-			a = powf(a, m_exp->value());
-			a = sus + a * (1 - sus);
-		}
-		else {
-			a = sus;
-		}
-		float amt = m_amt->value();
-		if (amt >= 0) {
-			a = amt * a + 1 - amt;
-		}
-		else {
-			a = 1 - (-amt) * a;
-		}
-		m_state += 1.0f / srate;
+		return powf(amp, m_nmodel->m_exp.value());
+	}
+	float processFrame(Params p)
+	{
 		if (m_prev == nullptr) {
 			return 0;
 		}
-		return a * m_prev->processFrame(freq, srate);
+		float stretchL = powf(440.0f / p.freq, m_nmodel->m_stretch.value());
+		float del = stretchL * m_nmodel->m_del.value();
+		float att = stretchL * m_nmodel->m_att.value();
+		float hold = stretchL * m_nmodel->m_hold.value();
+		float dec = stretchL * m_nmodel->m_dec.value();
+		float sus = m_nmodel->m_sus.value();
+		float amp;
+		if (m_state < del) {
+			amp = 0;
+		}
+		else if (m_state < del + att) {
+			amp = (m_state - del) / att; //0.0...1.0
+			amp = transform(amp); //0.0...1.0
+		}
+		else if (m_state < del + att + hold) {
+			amp = 1;
+		}
+		else if (m_state < del + att + hold + dec) {
+			amp = 1 - (m_state - del - att - hold) / dec; //1.0...0.0
+			amp = transform(amp); //1.0...0.0
+			amp = sus + amp * (1 - sus); //1.0...sus
+		}
+		else {
+			amp = sus;
+		}
+		float amt = m_nmodel->m_amt.value();
+		if (amt >= 0) {
+			amp = 1 - amt + amt * amp; //1.0-amt...1.0
+		}
+		else {
+			amp = 1 - (-amt) * amp; //1.0...1.0-|amt|
+		}
+		m_state += 1.0f / p.srate;
+		return amp * m_prev->processFrame(p);
 	}
-	FloatModel *m_amt;
-	FloatModel *m_exp;
-	FloatModel *m_stretch;
-	FloatModel *m_del;
-	FloatModel *m_att;
-	FloatModel *m_hold;
-	FloatModel *m_dec;
-	FloatModel *m_sus;
+	void resetState() override {
+		HPNode::resetState();
+		if (m_prev != nullptr) {
+			m_prev->resetState();
+		}
+		m_state = 0.0f;
+	}
+	shared_ptr<HPEnvModel> m_nmodel;
 	unique_ptr<HPNode> m_prev;
 	float m_state = 0.0f;
 };
@@ -150,7 +155,7 @@ inline unique_ptr<HPNode> instantiateEnv(HPModel* model, int model_i) {
 	return make_unique<HPEnv>(
 		model,
 		model_i,
-		static_cast<HPEnvModel*>(model->m_nodes[model_i].get())
+		static_pointer_cast<HPEnvModel>(model->m_nodes[model_i])
 	);
 }
 
@@ -164,7 +169,8 @@ public:
 			m_att(new Knob(view, "attack")),
 			m_hold(new Knob(view, "hold")),
 			m_dec(new Knob(view, "decay")),
-			m_sus(new Knob(view, "sustain"))
+			m_sus(new Knob(view, "sustain")),
+			m_smooth(new LedCheckBox(view, "smooth"))
 	{
 		m_widgets.emplace_back(m_amt);
 		m_exp->move(30, 0);
@@ -181,9 +187,11 @@ public:
 		m_widgets.emplace_back(m_dec);
 		m_sus->move(120, 30);
 		m_widgets.emplace_back(m_sus);
+		m_smooth->move(150, 30);
+		m_widgets.emplace_back(m_smooth);
 	}
-	void setModel(HPModel::Node* model) {
-		HPEnvModel *modelCast = static_cast<HPEnvModel*>(model);
+	void setModel(weak_ptr<HPModel::Node> nmodel) {
+		auto modelCast = static_cast<HPEnvModel*>(nmodel.lock().get());
 		m_amt->setModel(&modelCast->m_amt);
 		m_exp->setModel(&modelCast->m_exp);
 		m_stretch->setModel(&modelCast->m_stretch);
@@ -192,6 +200,7 @@ public:
 		m_hold->setModel(&modelCast->m_hold);
 		m_dec->setModel(&modelCast->m_dec);
 		m_sus->setModel(&modelCast->m_sus);
+		m_smooth->setModel(&modelCast->m_smooth);
 	}
 private:
 	Knob *m_amt;
@@ -202,6 +211,7 @@ private:
 	Knob *m_hold;
 	Knob *m_dec;
 	Knob *m_sus;
+	LedCheckBox *m_smooth;
 };
 
 using Definition = HPDefinition<HPEnvModel>;

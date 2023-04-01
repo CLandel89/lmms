@@ -37,7 +37,7 @@ HPModel::HPModel(HPInstrument* instrument) {
 unique_ptr<HPNode> HPModel::instantiatePrev(int i) {
 	// the "current" node looks backwards for any "previous" node
 	for (int j = i - 1; j >= 0; j--) {
-		if (m_nodes[i]->m_pipe.value() == m_nodes[j]->m_pipe.value()) {
+		if (m_nodes[i]->prevPipe() == m_nodes[j]->m_pipe.value()) {
 			return m_nodes[j]->instantiate(this, j);
 		}
 	}
@@ -75,7 +75,30 @@ unique_ptr<IntModel> HPModel::newArgument(Instrument* instrument, int i) {
 }
 
 HPModel::Node::Node(Instrument* instrument) :
-		m_pipe(0, 0, 99, instrument, QString("pipe"))
+		m_pipe(0, 0, 99, instrument, QString("pipe")),
+		m_customPrev(-1, -1, 99, instrument, QString("custom prev pipe"))
 {}
+int HPModel::Node::prevPipe() {
+	if (m_customPrev.value() == -1) {
+		return m_pipe.value();
+	}
+	return m_customPrev.value();
+}
+
+HPOscModel::HPOscModel(Instrument* instrument) :
+		Node(instrument),
+		m_ph(0.0f, -360.0f, 360.0f, 1.0f, instrument, QString("phase"))
+{}
+void HPOscModel::load(int model_i, const QDomElement& elem) {
+	QString is = "n" + QString::number(model_i);
+	m_ph.loadSettings(elem, is + "_phase");
+	loadImpl(model_i, elem);
+}
+void HPOscModel::save(int model_i, QDomDocument& doc, QDomElement& elem) {
+	QString is = "n" + QString::number(model_i);
+	m_ph.saveSettings(doc, elem, is + "_phase");
+	saveImpl(model_i, doc, elem);
+}
+bool HPOscModel::usesPrev() { return false; }
 
 } // namespace lmms::hyperpipe

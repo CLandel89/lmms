@@ -37,8 +37,9 @@ struct HPTransitionModel : public HPModel::Node {
 			Node(instrument),
 			m_tS(0.0f, 0.0f, 2.0f, 0.01f, instrument, QString("transition seconds")),
 			m_tB(1.0f, 0.0f, 10.0f, 0.001f, instrument, QString("transition beats")),
-			m_attExp(10.0f, 0.01f, 20.0f, 0.01f, instrument, QString("transition attack exponent")),
-			m_order(instrument, QString("transition order"))
+			m_attExp(2.0f, 0.01f, 20.0f, 0.01f, instrument, QString("transition attack exponent")),
+			m_order(instrument, QString("transition order")),
+			m_smooth(true, instrument, QString("transition smooth"))
 	{
 		for (int o = 0; o < N_ORDER_TYPES; o++) {
 			switch (o) {
@@ -55,6 +56,7 @@ struct HPTransitionModel : public HPModel::Node {
 	FloatModel m_tB;
 	FloatModel m_attExp;
 	ComboBoxModel m_order;
+	BoolModel m_smooth;
 	enum OrderTypes {
 		KEEP_LAST,
 		PINGPONG,
@@ -71,6 +73,7 @@ struct HPTransitionModel : public HPModel::Node {
 		m_tB.loadSettings(elem, is + "_tB");
 		m_attExp.loadSettings(elem, is + "_attExp");
 		m_order.loadSettings(elem, is + "_order");
+		m_smooth.loadSettings(elem, is + "_smooth");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
@@ -78,17 +81,16 @@ struct HPTransitionModel : public HPModel::Node {
 		m_tB.saveSettings(doc, elem, is + "_tB");
 		m_attExp.saveSettings(doc, elem, is + "_attExp");
 		m_order.saveSettings(doc, elem, is + "_order");
+		m_smooth.saveSettings(doc, elem, is + "_smooth");
 	}
+	bool usesPrev() { return true; }
 };
 
 class HPTransition : public HPNode
 {
 public:
-	HPTransition(HPModel* model, int model_i, HPTransitionModel* nmodel) :
-			m_tS(&nmodel->m_tS),
-			m_tB(&nmodel->m_tB),
-			m_attExp(&nmodel->m_attExp),
-			m_order(&nmodel->m_order)
+	HPTransition(HPModel* model, int model_i, shared_ptr<HPTransitionModel> nmodel) :
+			m_nmodel(nmodel)
 	{
 		auto prev = model->instantiatePrev(model_i);
 		if (prev != nullptr) {
@@ -99,37 +101,24 @@ public:
 		}
 	}
 private:
-	float processFrame(float freq, float srate) {
+	float processFrame(Params p) {
 		if (m_nodes.size() == 0) {
 			return 0.0f;
 		}
 		if (m_nodes.size() == 1) {
-			return m_nodes[0]->processFrame(freq, srate);
+			return m_nodes[0]->processFrame(p);
 		}
 		// m_state describes the (fractional) number of past node transitions
 		HPNode *from = nullptr, *to = nullptr; //these are set in the switch scope
-		switch (m_order->value()) {
+		switch (m_nmodel->m_order.value()) {
 			case HPTransitionModel::KEEP_LAST:
-				if (m_state < 0) {
-					// negative state values can result from FM
-					if (m_state < -1) {
-						//should never become that much, but for extreme cases:
-						from = to = m_nodes.back().get();
-					}
-					else {
-						from = m_nodes.back().get();
-						to = m_nodes[0].get();
-					}
+				if (m_state >= m_nodes.size() - 1) {
+					from = to = m_nodes.back().get();
 				}
 				else {
-					if (m_state >= m_nodes.size() - 1) {
-						from = to = m_nodes.back().get();
-					}
-					else {
-						int i = m_state;
-						from = m_nodes[i].get();
-						to = m_nodes[i + 1].get();
-					}
+					int i = m_state;
+					from = m_nodes[i].get();
+					to = m_nodes[i + 1].get();
 				}
 				break;
 			case HPTransitionModel::PINGPONG: {
@@ -161,27 +150,45 @@ private:
 			}
 			default:
 				string msg = "It appears that there is no implementation for HyperPipe transition order type "
-					+ m_order->value() + string(".");
+					+ m_nmodel->m_order.value() + string(".");
 				throw invalid_argument(msg);
 		}
-		float interp = absFraction(m_state);
-		interp = powf(interp, m_attExp->value());
-		const float spb = 60.0f / Engine::getSong()->getTempo(); //seconds per beat
-		const float dur = m_tS->value() + spb * m_tB->value();
-		if (dur != 0) {
-			m_state += 1.0f / srate / dur;
-		}
 		if (from == to) {
-			return from->processFrame(freq, srate);
+			return from->processFrame(p);
 		}
-		float f = from->processFrame(freq, srate);
-		float t = to->processFrame(freq, srate);
+		float interp = hpposmodf(m_state);
+		if (m_nmodel->m_smooth.value()) {
+			interp = hpsstep(interp);
+		}
+		interp = powf(interp, m_nmodel->m_attExp.value()); //transition attack exponent
+		float spb = 60.0f / Engine::getSong()->getTempo(); //seconds per beat
+		float tS = m_nmodel->m_tS.value();
+		float tB = m_nmodel->m_tB.value();
+		// calculate node samples
+		float f = from->processFrame(p);
+		float t = to->processFrame(p);
+		// change state
+		float dur = tS + spb * tB; //duration of a single transition
+		if (dur != 0) {
+			float sample_dur = 1.0f / p.srate / dur; //duration of a sample / dur
+			if (fraction(m_state) + sample_dur >= 1.0f) {
+				// "from" has fulfilled a transition.
+				// Now is the best time to reset the state of "from".
+				from->resetState();
+			}
+			m_state += sample_dur;
+		}
+		// return result
 		return (1 - interp) * f + interp * t;
 	}
-	FloatModel *m_tS;
-	FloatModel *m_tB;
-	FloatModel *m_attExp;
-	ComboBoxModel *m_order;
+	void resetState() override {
+		HPNode::resetState();
+		m_state = 0.0f;
+		for (auto &node : m_nodes) {
+			node->resetState();
+		}
+	}
+	shared_ptr<HPTransitionModel> m_nmodel;
 	vector<unique_ptr<HPNode>> m_nodes;
 	float m_state = 0.0f;
 };
@@ -190,7 +197,7 @@ inline unique_ptr<HPNode> instantiateTransition(HPModel* model, int model_i) {
 	return make_unique<HPTransition>(
 		model,
 		model_i,
-		static_cast<HPTransitionModel*>(model->m_nodes[model_i].get())
+		static_pointer_cast<HPTransitionModel>(model->m_nodes[model_i])
 	);
 }
 
@@ -200,7 +207,8 @@ public:
 			m_tS(new Knob(view, "transition seconds")),
 			m_tB(new Knob(view, "transition beats")),
 			m_attExp(new Knob(view, "transition attack exponent")),
-			m_order(new ComboBox(view, "transition order"))
+			m_order(new ComboBox(view, "transition order")),
+			m_smooth(new LedCheckBox(view, "transition smooth"))
 	{
 		m_widgets.emplace_back(m_tS);
 		m_tB->move(30, 0);
@@ -209,19 +217,23 @@ public:
 		m_widgets.emplace_back(m_attExp);
 		m_order->move(90, 0);
 		m_widgets.emplace_back(m_order);
+		m_smooth->move(0, 30);
+		m_widgets.emplace_back(m_smooth);
 	}
-	void setModel(HPModel::Node* model) {
-		HPTransitionModel *modelCast = static_cast<HPTransitionModel*>(model);
+	void setModel(weak_ptr<HPModel::Node> nmodel) {
+		auto modelCast = static_cast<HPTransitionModel*>(nmodel.lock().get());
 		m_tS->setModel(&modelCast->m_tS);
 		m_tB->setModel(&modelCast->m_tB);
 		m_attExp->setModel(&modelCast->m_attExp);
 		m_order->setModel(&modelCast->m_order);
+		m_smooth->setModel(&modelCast->m_smooth);
 	}
 private:
 	Knob *m_tS;
 	Knob *m_tB;
 	Knob *m_attExp;
 	ComboBox *m_order;
+	LedCheckBox *m_smooth;
 };
 
 using Definition = HPDefinition<HPTransitionModel>;

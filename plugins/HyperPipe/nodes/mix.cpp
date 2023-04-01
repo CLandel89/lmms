@@ -50,33 +50,43 @@ struct HPMixModel : public HPModel::Node {
 		QString is = "n" + QString::number(model_i);
 		m_mix.saveSettings(doc, elem, is + "_mix");
 	}
+	bool usesPrev() { return true; }
 };
 
 class HPMix : public HPNode
 {
 public:
-	HPMix(HPModel* model, int model_i, HPMixModel* nmodel) :
-			m_mix(&nmodel->m_mix),
+	HPMix(HPModel* model, int model_i, shared_ptr<HPMixModel> nmodel) :
+			m_nmodel(nmodel),
 			m_prev(model->instantiatePrev(model_i)),
 			m_arguments(model->instantiateArguments(model_i))
 	{}
 private:
-	float processFrame(float freq, float srate) {
+	float processFrame(Params p) {
 		float prev = 0.0f;
 		if (m_prev != nullptr) {
-			prev = m_prev->processFrame(freq, srate);
+			prev = m_prev->processFrame(p);
 		}
 		float args = 0.0f;
 		for (auto &argument : m_arguments) {
-			args += argument->processFrame(freq, srate);
+			args += argument->processFrame(p);
 		}
 		if (m_arguments.size() > 0) {
 			args /= m_arguments.size();
 		}
-		float mix = m_mix->value();
+		float mix = m_nmodel->m_mix.value();
 		return (1 - mix) * prev + mix * args;
 	}
-	FloatModel *m_mix;
+	void resetState() override {
+		HPNode::resetState();
+		if (m_prev != nullptr) {
+			m_prev->resetState();
+		}
+		for (auto &argument : m_arguments) {
+			argument->resetState();
+		}
+	}
+	shared_ptr<HPMixModel> m_nmodel;
 	unique_ptr<HPNode> m_prev;
 	vector<unique_ptr<HPNode>> m_arguments;
 };
@@ -85,7 +95,7 @@ inline unique_ptr<HPNode> instantiateMix(HPModel* model, int model_i) {
 	return make_unique<HPMix>(
 		model,
 		model_i,
-		static_cast<HPMixModel*>(model->m_nodes[model_i].get())
+		static_pointer_cast<HPMixModel>(model->m_nodes[model_i])
 	);
 }
 
@@ -96,8 +106,8 @@ public:
 	{
 		m_widgets.emplace_back(m_mix);
 	}
-	void setModel(HPModel::Node *model) {
-		HPMixModel *modelCast = static_cast<HPMixModel*>(model);
+	void setModel(weak_ptr<HPModel::Node> nmodel) {
+		auto modelCast = static_cast<HPMixModel*>(nmodel.lock().get());
 		m_mix->setModel(&modelCast->m_mix);
 	}
 private:

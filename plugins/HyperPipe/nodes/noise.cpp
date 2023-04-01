@@ -42,12 +42,13 @@ struct HPNoiseModel : public HPModel::Node {
 	string name() { return NOISE_NAME; }
 	void load(int model_i, const QDomElement& elem) {}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {}
+	bool usesPrev() { return false; }
 };
 
 class HPNoise : public HPNode
 {
 public:
-	float processFrame(float freq, float srate) {
+	float processFrame(Params p) {
 		return 1.0f - fastRandf(2.0f);
 	}
 };
@@ -57,7 +58,7 @@ inline unique_ptr<HPNode> instantiateNoise() { return make_unique<HPNoise>(); }
 class HPNoiseView : public HPNodeView {
 public:
 	HPNoiseView(HPView* view, HPInstrument* instrument) {}
-	void setModel(HPModel::Node *model) {}
+	void setModel(weak_ptr<HPModel::Node> model) {}
 };
 
 using Definition = HPDefinition<HPNoiseModel>;

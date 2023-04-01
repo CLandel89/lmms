@@ -75,7 +75,7 @@ void HPView::MapWidget::paintEvent(QPaintEvent* ev) {
 	float nw = w / m_model->m_nodes.size();
 	int i = m_parent->model_i();
 	painter.fillRect(0, 0, w, h, QColor(0, 0, 0));
-	painter.fillRect(i * nw, 0, nw, h, QColor(128, 128, 128));
+	painter.fillRect(i * nw, 0, nw, h, QColor(64, 64, 64));
 	map<int, int> pipe2y;
 	float nh;
 	{
@@ -91,11 +91,34 @@ void HPView::MapWidget::paintEvent(QPaintEvent* ev) {
 			y += nh;
 		}
 	}
-	int ni = 0;
-	for (auto &node : m_model->m_nodes) {
+	for (int ni = 0; ni < m_model->m_nodes.size(); ni++) {
+		auto node = m_model->m_nodes[ni];
 		int y = pipe2y[node->m_pipe.value()];
 		QColor c = m_colors[node->name()];
 		painter.fillRect(ni * nw, y, nw, h / pipe2y.size(), c);
+		int prevPipe = node->usesPrev()
+			? (node->m_customPrev.value() == -1
+				? node->m_pipe.value()
+				: node->m_customPrev.value())
+			: -1;
+		if (prevPipe != -1) {
+			for (int j = ni - 1; j >= 0; j--) {
+				auto prev = m_model->m_nodes[j];
+				if (prev->m_pipe.value() == prevPipe) {
+					y = pipe2y[prevPipe];
+					if (prevPipe != node->m_pipe.value()) {
+						painter.fillRect(ni * nw, y, nw / 2, nh, QColor(128, 128, 128));
+					}
+					painter.fillRect(
+						(j + 1) * nw,
+						y + nh / 2,
+						(ni - j - 1) * nw,
+						1,
+						QColor(128, 128, 128));
+					break;
+				}
+			}
+		}
 		for (auto &argument : node->m_arguments) {
 			int arg_ni;
 			for (arg_ni = ni - 1; arg_ni >= 0; arg_ni--) {
@@ -116,10 +139,10 @@ void HPView::MapWidget::paintEvent(QPaintEvent* ev) {
 				1,
 				QColor(255, 255, 255));
 		}
-		ni++;
 	}
-	painter.fillRect(i * nw, 0, nw, 1, QColor(128, 128, 128));
-	painter.fillRect(i * nw, h - 1, nw, 1, QColor(128, 128, 128));
+	int y = pipe2y[m_model->m_nodes[i]->m_pipe.value()];
+	painter.fillRect(i * nw, y, nw, 3, QColor(128, 128, 128));
+	painter.fillRect(i * nw, y + nh - 3, nw, 3, QColor(128, 128, 128));
 }
 void HPView::MapWidget::wheelEvent(QWheelEvent* ev) {
 	if (m_model == nullptr) { return; }
@@ -139,8 +162,10 @@ void HPView::MapWidget::sl_update() {
 HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 		InstrumentView(instrument, parent),
 		m_instrument(instrument),
+		m_ph(new Knob(this, "phase")),
 		m_nodeType(new ComboBox(this, "node type")),
 		m_pipe(new LcdSpinBox(2, this, "pipe")),
+		m_customPrev(new LcdSpinBox(2, this, "custom prev pipe")),
 		m_prev(new PixmapButton(this)),
 		m_next(new PixmapButton(this)),
 		m_moveUp(new PixmapButton(this)),
@@ -177,6 +202,12 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 	// node pipe number
 	m_pipe->move(120, 30);
 	m_pipe->setModel(&curNode->m_pipe);
+	m_customPrev->move(160, 30);
+	m_customPrev->setModel(&curNode->m_customPrev);
+	m_customPrev->addTextForValue(-1, "--");
+
+	// oscillator phase offset
+	m_ph->move(200, 30);
 
 	// node move/create/delete buttons
 	m_prev->setActiveGraphic(PLUGIN_NAME::getIconPixmap("prev"));
@@ -207,6 +238,8 @@ HPView::HPView(HPInstrument* instrument, QWidget* parent) :
 	m_moveDown->setInactiveGraphic(PLUGIN_NAME::getIconPixmap("moveDown"));
 	m_moveDown->move(200, 5);
 	connect(m_moveDown, SIGNAL(clicked()), this, SLOT(sl_moveDown()));
+
+	updateWidgets();
 }
 
 HPView::~HPView() {
@@ -236,7 +269,7 @@ void HPView::sl_chNodeType() {
 }
 
 void HPView::updateNodeView() {
-	auto modelNode = m_instrument->m_model.m_nodes[m_model_i].get();
+	auto modelNode = m_instrument->m_model.m_nodes[m_model_i];
 	string nodeType = modelNode->name();
 	if (nodeType != m_nodeTypeModel.currentText().toStdString()) {
 		//combo box needs update
@@ -251,7 +284,23 @@ void HPView::updateNodeView() {
 	m_curNode->setModel(modelNode);
 	m_curNode->show();
 	m_pipe->setModel(&modelNode->m_pipe);
+	m_customPrev->setModel(&modelNode->m_customPrev);
+	if (modelNode->usesPrev()) {
+		m_customPrev->show();
+	}
+	else {
+		m_customPrev->hide();
+	}
 	m_arguments.setModel(modelNode);
+	auto oscNode = dynamic_cast<HPOscModel*>(modelNode.get());
+	if (oscNode != nullptr) {
+		m_ph->setModel(&oscNode->m_ph);
+		m_ph->show();
+	}
+	else {
+		m_ph->hide();
+		m_ph->setModel(nullptr);
+	}
 	updateWidgets();
 }
 
@@ -291,7 +340,6 @@ void HPView::sl_delete() {
 	if (m_destructing) { return; }
 	auto &nodes = m_instrument->m_model.m_nodes;
 	if (nodes.size() <= 1) { return; }
-	m_instrument->m_model.m_trashbin.emplace_back(std::move(nodes[m_model_i]));
 	nodes.erase(nodes.begin() + m_model_i);
 	if (m_model_i >= nodes.size()) { m_model_i--; }
 	updateNodeView();
@@ -354,23 +402,25 @@ HPVArguments::~HPVArguments() {
 	m_destructing = true;
 }
 
-void HPVArguments::setModel(HPModel::Node* model) {
-	if (model == m_model) {
+void HPVArguments::setModel(weak_ptr<HPModel::Node> nmodel) {
+	if (nmodel.lock().get() == m_nmodel.lock().get()) {
 		return;
 	}
 	m_pos = 0;
-	m_model = model;
+	m_nmodel = nmodel;
 	update();
 }
 
 void HPVArguments::update() {
-	if (m_model == nullptr) {
+	if (m_nmodel.expired()) {
 		for (auto& pipe : m_pipes) {
 			pipe->hide();
+			pipe->setModel(nullptr);
 		}
 		return;
 	}
-	const int maxPos = static_cast<int>(m_model->m_arguments.size()) - m_pipes.size();
+	auto size = m_nmodel.lock()->m_arguments.size();
+	const int maxPos = static_cast<int>(size) - m_pipes.size();
 	if (m_pos > maxPos) {
 		m_pos = maxPos;
 	}
@@ -379,9 +429,10 @@ void HPVArguments::update() {
 	}
 	for (int li = 0; li < m_pipes.size(); li++) {
 		auto ai = m_pos + li;
-		if (m_model->m_arguments.size() > ai) {
+		if (size > ai) {
 			m_pipes[li]->show();
-			m_pipes[li]->setModel(m_model->m_arguments[ai].get());
+			auto amodel = m_nmodel.lock()->m_arguments[ai].get();
+			m_pipes[li]->setModel(amodel);
 		}
 		else {
 			m_pipes[li]->hide();
@@ -405,10 +456,11 @@ void HPVArguments::sl_right() {
 
 void HPVArguments::sl_add() {
 	if (m_destructing) { return; }
-	if (m_model == nullptr) { return; }
-	if (m_instrument->m_definitions[m_model->name()]->forbidsArguments()) { return; }
-	const auto ai = m_model->m_arguments.size();
-	m_model->m_arguments.emplace_back(
+	if (m_nmodel.expired()) { return; }
+	auto name = m_nmodel.lock()->name();
+	if (m_instrument->m_definitions[name]->forbidsArguments()) { return; }
+	const auto ai = m_nmodel.lock()->m_arguments.size();
+	m_nmodel.lock()->m_arguments.emplace_back(
 		HPModel::newArgument(m_instrument, ai)
 	);
 	m_pos++;
@@ -417,9 +469,9 @@ void HPVArguments::sl_add() {
 
 void HPVArguments::sl_delete() {
 	if (m_destructing) { return; }
-	if (m_model == nullptr) { return; }
-	if (m_model->m_arguments.size() <= 0) { return; }
-	m_model->m_arguments.pop_back();
+	if (m_nmodel.expired()) { return; }
+	if (m_nmodel.lock()->m_arguments.size() == 0) { return; }
+	m_nmodel.lock()->m_arguments.pop_back();
 	update();
 }
 

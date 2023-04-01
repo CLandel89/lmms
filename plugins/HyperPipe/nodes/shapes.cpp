@@ -33,33 +33,31 @@ const string HPDefinitionBase::DEFAULT_TYPE = SHAPES_NAME;
 
 inline unique_ptr<HPNode> instantiateShapes(HPModel* model, int model_i);
 
-struct HPShapesModel : public HPModel::Node {
+struct HPShapesModel : public HPOscModel {
 	HPShapesModel(Instrument* instrument) :
-			Node(instrument),
+			HPOscModel(instrument),
 			m_shape(0.0f, -3.0f, 3.0f, 0.01f, instrument, QString("shape")),
-			m_jitter(0.0f, 0.0f, 100.0f, 1.0f, instrument, QString("jitter")),
-			m_smoothstep(false, instrument, QString("shapes smoothstep"))
+			m_smoothstep(false, instrument, QString("shapes smoothstep")),
+			m_corr(true, instrument, QString("shapes amp correction"))
 	{}
 	FloatModel m_shape;
-	FloatModel m_jitter;
 	BoolModel m_smoothstep;
+	BoolModel m_corr;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateShapes(model, model_i);
 	}
-	string name() {
-		return SHAPES_NAME;
-	}
-	void load(int model_i, const QDomElement& elem) {
+	string name() { return SHAPES_NAME; }
+	void loadImpl(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
 		m_shape.loadSettings(elem, is + "_shape");
-		m_jitter.loadSettings(elem, is + "_jitter");
 		m_smoothstep.loadSettings(elem, is + "_smoothstep");
+		m_corr.loadSettings(elem, is + "_corr");
 	}
-	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
+	void saveImpl(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
 		m_shape.saveSettings(doc, elem, is + "_shape");
-		m_jitter.saveSettings(doc, elem, is + "_jitter");
 		m_smoothstep.saveSettings(doc, elem, is + "_smoothstep");
+		m_corr.saveSettings(doc, elem, is + "_corr");
 	}
 };
 
@@ -136,55 +134,58 @@ inline float tri2sqr(float ph, float morph)
 class HPShapes : public HPOsc
 {
 public:
-	HPShapes(HPModel* model, int model_i, HPShapesModel* nmodel) :
-			HPOsc(model, model_i),
-			m_shape(&nmodel->m_shape),
-			m_jitter(&nmodel->m_jitter),
-			m_smoothstep(&nmodel->m_smoothstep)
+	HPShapes(HPModel* model, int model_i, shared_ptr<HPShapesModel> nmodel) :
+			HPOsc(model, model_i, nmodel),
+			m_nmodel(nmodel)
 	{}
 private:
 	float shape(float ph) {
-		//continuously add to the jittering
-		m_jitterState = (127.0f * m_jitterState + fastRandf(m_jitter->value())) / 128.0f;
-		float shape = m_shape->value() + m_jitterState - 0.5f * m_jitter->value();
+		float shape = m_nmodel->m_shape.value();
 		shape = hpposmodf(shape, 3.0f);
 		uint8_t shapeType = uint8_t(shape);
-		float morph = fraction(shape);
+		float morph = hpposmodf(shape);
 		morph = hpsstep(morph);
-		float amp; //the shapes with vertical edges sound too loud
+		float amp = 1; //the shapes with vertical edges sound too loud
+		bool corr = m_nmodel->m_corr.value();
 		float s;
 		if (shapeType == 0) {
-			amp = 0.4f + 0.6f * morph;
+			if (corr) {
+				amp = 0.4f + 0.6f * morph;
+			}
 			s = saw2tri(ph, morph);
 		}
 		else if (shapeType == 1) {
-			amp = 1.0f - 0.7f * morph;
+			if (corr) {
+				amp = 1.0f - 0.7f * morph;
+			}
 			s = tri2sqr(ph, morph);
 		}
 		else { // shapeType == 2
-			amp = 0.3f + 0.1f * morph;
+			if (corr) {
+				amp = 0.3f + 0.1f * morph;
+			}
 			s = sqr2saw(ph, morph);
 		}
-		if (! m_smoothstep->value()) {
+		if (corr) {
+			amp = hpsstep(amp); // morph is smooth, so amp is, too
+		}
+		if (! m_nmodel->m_smoothstep.value()) {
 			return amp * s;
 		}
 		// with smoothstep:
-		s = (s + 1) / 2; //0.0 <= s <= 1.0
+		s = (s + 1) / 2; // 0.0...1.0
 		s = hpsstep(s);
-		s = -1 + 2 * s; //-1.0 <= s <= 1.0
+		s = -1 + 2 * s; // -1.0...1.0
 		return amp * s;
 	}
-	FloatModel *m_shape;
-	FloatModel *m_jitter;
-	BoolModel *m_smoothstep;
-	float m_jitterState = 0.0f;
+	shared_ptr<HPShapesModel> m_nmodel;
 };
 
 inline unique_ptr<HPNode> instantiateShapes(HPModel* model, int model_i) {
 	return make_unique<HPShapes>(
 		model,
 		model_i,
-		static_cast<HPShapesModel*>(model->m_nodes[model_i].get())
+		static_pointer_cast<HPShapesModel>(model->m_nodes[model_i])
 	);
 }
 
@@ -192,25 +193,25 @@ class HPShapesView : public HPNodeView {
 public:
 	HPShapesView(HPView* view) :
 			m_shape(new Knob(view, "shape")),
-			m_jitter(new Knob(view, "jitter")),
-			m_smoothstep(new LedCheckBox(view, "shapes smoothstep"))
+			m_smoothstep(new LedCheckBox(view, "shapes smoothstep")),
+			m_corr(new LedCheckBox(view, "shapes amp correction"))
 	{
 		m_widgets.emplace_back(m_shape);
-		m_widgets.emplace_back(m_jitter);
-		m_jitter->move(40, 0);
 		m_widgets.emplace_back(m_smoothstep);
-		m_smoothstep->move(80, 0);
+		m_smoothstep->move(30, 0);
+		m_widgets.emplace_back(m_corr);
+		m_corr->move(50, 0);
 	}
-	void setModel(HPModel::Node* model) {
-		HPShapesModel *modelCast = static_cast<HPShapesModel*>(model);
+	void setModel(weak_ptr<HPModel::Node> nmodel) {
+		auto modelCast = static_cast<HPShapesModel*>(nmodel.lock().get());
 		m_shape->setModel(&modelCast->m_shape);
-		m_jitter->setModel(&modelCast->m_jitter);
 		m_smoothstep->setModel(&modelCast->m_smoothstep);
+		m_corr->setModel(&modelCast->m_corr);
 	}
 private:
 	Knob *m_shape;
-	Knob *m_jitter;
 	LedCheckBox *m_smoothstep;
+	LedCheckBox *m_corr;
 };
 
 using Definition = HPDefinition<HPShapesModel>;
