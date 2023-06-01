@@ -58,6 +58,7 @@ inline map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument*
 	map<string, unique_ptr<HPDefinitionBase>> definitions;
 	createDefinition<HPAmModel>(definitions, instrument);
 	createDefinition<HPAmpModel>(definitions, instrument);
+	createDefinition<HPCrushModel>(definitions, instrument);
 	createDefinition<HPEnvModel>(definitions, instrument);
 	createDefinition<HPFilterModel>(definitions, instrument);
 	createDefinition<HPFmModel>(definitions, instrument);

@@ -316,6 +316,7 @@ private:
 // The types for M are:
 struct HPAmModel;
 struct HPAmpModel;
+struct HPCrushModel;
 struct HPEnvModel;
 struct HPFilterModel;
 struct HPFmModel;

@@ -4,6 +4,7 @@ BUILD_PLUGIN(HyperPipe
 	instrument.cpp HyperPipe.h model.cpp synth.cpp view.cpp
 	nodes/am.cpp
 	nodes/amp.cpp
+	nodes/crush.cpp
 	nodes/env.cpp
 	nodes/filter.cpp
 	nodes/leveler.cpp
