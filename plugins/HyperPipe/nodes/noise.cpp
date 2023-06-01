@@ -47,9 +47,18 @@ struct HPNoiseModel : public HPModel::Node {
 
 class HPNoise : public HPNode
 {
+	float m_excess = 0;
 public:
 	float processFrame(Params p) {
-		return 1.0f - fastRandf(2.0f);
+		float f = 1 - fastRandf(2) - m_excess / 4;
+		if (f > 1) {
+			f = 1;
+		}
+		if (f < -1) {
+			f = -1;
+		}
+		m_excess += f;
+		return f;
 	}
 };
 

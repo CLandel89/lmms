@@ -78,7 +78,7 @@ struct HPReverbSCModel : public HPModel::Node {
 		m_color.saveSettings(doc, elem, is + "_color");
 		m_dbOut.saveSettings(doc, elem, is + "_dbOut");
 		m_autoColor.saveSettings(doc, elem, is + "_autoColor");
-		m_autoCorr.loadSettings(elem, is + "_autoCorr");
+		m_autoCorr.saveSettings(doc, elem, is + "_autoCorr");
 	}
 	bool usesPrev() { return true; }
 };

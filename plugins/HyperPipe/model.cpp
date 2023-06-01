@@ -87,7 +87,7 @@ int HPModel::Node::prevPipe() {
 
 HPOscModel::HPOscModel(Instrument* instrument) :
 		Node(instrument),
-		m_ph(0.0f, -360.0f, 360.0f, 1.0f, instrument, QString("phase"))
+		m_ph(0.0f, -360.0f, 360.0f, 0.1f, instrument, QString("phase"))
 {}
 void HPOscModel::load(int model_i, const QDomElement& elem) {
 	QString is = "n" + QString::number(model_i);
