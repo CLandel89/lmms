@@ -25,6 +25,12 @@
 
 #include "HyperPipe.h"
 
+#include <limits>
+
+namespace {
+	const float inf = std::numeric_limits<float>::infinity();
+}
+
 namespace lmms::hyperpipe
 {
 
@@ -83,6 +89,9 @@ array<float,2> HPSynth::processFrame(float freq, float srate) {
 		srate: srate,
 		ph: m_ph,
 	});
+	if (f > 100000)         f = 100000.0;
+	else if (f < 100000)    f = -100000.0;
+	else if (!isfinite(f))  f = 0.0;
 	m_ph += freq / srate;
 	m_ph = hpposmodf(m_ph);
 	return {f, f};
