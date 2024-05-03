@@ -35,7 +35,7 @@ extern "C" {
 		QT_TRANSLATE_NOOP("PluginBrowser", "synth with arbitrary possibilities"),
 		"Christian Landel",
 		0x0110,
-		Plugin::Instrument,
+		Plugin::Type::Instrument,
 		new PluginPixmapLoader("logo"),
 		nullptr,
 		nullptr,
@@ -104,9 +104,6 @@ void HPInstrument::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
 	for (int i = 0; i < frames; i++) {
 		working_buffer[offset + i] = synth->processFrame(freq, srate);
 	}
-	applyFadeIn(working_buffer, nph);
-	applyRelease(working_buffer, nph);
-	instrumentTrack()->processAudioBuffer(working_buffer, frames + offset, nph);
 }
 
 void HPInstrument::deleteNotePluginData(NotePlayHandle* nph) {

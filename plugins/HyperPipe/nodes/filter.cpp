@@ -103,7 +103,7 @@ private:
 	float m_srate_tmp;
 	tuple<float, float> m_freqReso_tmp = make_tuple(-1, -1);
 	BasicFilters<1> m_basicFilters;
-	static const auto m_filterType = BasicFilters<1>::FilterTypes::Bandpass_RC24;
+	static const auto m_filterType = BasicFilters<1>::FilterType::Bandpass_RC24;
 };
 
 inline unique_ptr<HPNode> instantiateFilter(HPModel* model, int model_i) {

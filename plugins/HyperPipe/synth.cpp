@@ -80,9 +80,6 @@ HPSynth::HPSynth(HPInstrument* instrument, NotePlayHandle* nph, HPModel* model) 
 }
 
 array<float,2> HPSynth::processFrame(float freq, float srate) {
-	if (m_lastNode == nullptr) {
-		return {0.0f, 0.0f};
-	}
 	float f = m_lastNode->processFrame(HPNode::Params {
 		freq: freq,
 		freqMod: freq,
@@ -90,7 +87,7 @@ array<float,2> HPSynth::processFrame(float freq, float srate) {
 		ph: m_ph,
 	});
 	if (f > 100000)         f = 100000.0;
-	else if (f < 100000)    f = -100000.0;
+	else if (f < -100000)   f = -100000.0;
 	else if (!isfinite(f))  f = 0.0;
 	m_ph += freq / srate;
 	m_ph = hpposmodf(m_ph);
