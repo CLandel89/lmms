@@ -12,6 +12,7 @@ BUILD_PLUGIN(HyperPipe
 	nodes/fm.cpp
 	nodes/mix.cpp
 	nodes/noise.cpp
+	nodes/noiseDet.cpp
 	nodes/organify.cpp
 	nodes/overdrive.cpp
 	nodes/reverbSC.cpp

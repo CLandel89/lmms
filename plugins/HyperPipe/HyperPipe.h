@@ -324,6 +324,7 @@ struct HPLevelerModel;
 struct HPLfoModel;
 struct HPMixModel;
 struct HPNoiseModel;
+struct HPNoiseDetModel;
 struct HPOrganifyModel;
 struct HPOverdriveModel;
 struct HPReverbSCModel;
