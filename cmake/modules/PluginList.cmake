@@ -33,6 +33,7 @@ SET(LMMS_PLUGIN_LIST
 	Compressor
 	CrossoverEQ
 	Delay
+	Dispersion
 	DualFilter
 	DynamicsProcessor
 	Eq
@@ -41,6 +42,7 @@ SET(LMMS_PLUGIN_LIST
 	HyperPipe
 	LadspaBrowser
 	LadspaEffect
+	LOMM
 	Lv2Effect
 	Lv2Instrument
 	Lb302
@@ -59,10 +61,12 @@ SET(LMMS_PLUGIN_LIST
 	Sf2Player
 	Sfxr
 	Sid
+	SlicerT
 	SpectrumAnalyzer
 	StereoEnhancer
 	StereoMatrix
 	Stk
+	TapTempo
 	VstBase
 	Vestige
 	VstEffect
@@ -101,7 +105,6 @@ ENDIF()
 IF(MSVC)
 	SET(MSVC_INCOMPATIBLE_PLUGINS
 		LadspaEffect
-		ZynAddSubFx
 	)
 	message(WARNING "Compiling with MSVC. The following plugins are not available: ${MSVC_INCOMPATIBLE_PLUGINS}")
 	LIST(REMOVE_ITEM PLUGIN_LIST ${MSVC_INCOMPATIBLE_PLUGINS})
