@@ -66,7 +66,7 @@ inline map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument*
 	createDefinition<HPLfoModel>(definitions, instrument);
 	createDefinition<HPMixModel>(definitions, instrument);
 	createDefinition<HPNoiseModel>(definitions, instrument);
-	createDefinition<HPNoiseDetModel>(definitions, instrument);
+	createDefinition<HPNoiseChipModel>(definitions, instrument);
 	createDefinition<HPOrganifyModel>(definitions, instrument);
 	createDefinition<HPOverdriveModel>(definitions, instrument);
 	createDefinition<HPReverbSCModel>(definitions, instrument);

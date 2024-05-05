@@ -1,5 +1,5 @@
 /*
-	noiseDet.cpp - implementation of the "deterministic noise" node type
+	noiseChip.cpp - implementation of the "noise chip" node type
 
 	HyperPipe - synth with arbitrary possibilities
 
@@ -28,12 +28,12 @@
 namespace lmms::hyperpipe
 {
 
-const string NOISE_DET_NAME = "noise det";
+const string NOISE_CHIP_NAME = "noise chip";
 
-inline unique_ptr<HPNode> instantiateNoiseDet(HPModel* model, int model_i);
+inline unique_ptr<HPNode> instantiateNoiseChip(HPModel* model, int model_i);
 
-struct HPNoiseDetModel : public HPModel::Node {
-	HPNoiseDetModel(Instrument* instrument) :
+struct HPNoiseChipModel : public HPModel::Node {
+	HPNoiseChipModel(Instrument* instrument) :
 			HPModel::Node(instrument),
 			m_mingle(
 				57,
@@ -41,9 +41,9 @@ struct HPNoiseDetModel : public HPModel::Node {
 	{}
 	IntModel m_mingle;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
-		return instantiateNoiseDet(model, model_i);
+		return instantiateNoiseChip(model, model_i);
 	}
-	string name() { return NOISE_DET_NAME; }
+	string name() { return NOISE_CHIP_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
 		m_mingle.loadSettings(elem, is + "_mingle");
@@ -55,17 +55,17 @@ struct HPNoiseDetModel : public HPModel::Node {
 	bool usesPrev() { return false; }
 };
 
-class HPNoiseDet : public HPNode
+class HPNoiseChip : public HPNode
 {
 	int32_t m_iter = 0;  // if ph and iter aren't separate, audible glitches will occur
 	float m_ph = 0;
 public:
-	HPNoiseDet(HPModel* model, int model_i, shared_ptr<HPNoiseDetModel> nmodel) :
+	HPNoiseChip(HPModel* model, int model_i, shared_ptr<HPNoiseChipModel> nmodel) :
 			HPNode(),
 			m_nmodel(nmodel)
 	{}
 	float processFrame(Params p) {
-		uint16_t iter         = m_iter < 0 ? -m_iter : m_iter;
+		uint16_t iter = m_iter < 0 ? -m_iter : m_iter;
 		iter *= m_nmodel->m_mingle.value();
 		uint16_t gray = iter ^ (iter >> 1);  // https://de.wikipedia.org/wiki/Gray-Code#Generierung
 		// mingle, bitwise
@@ -116,33 +116,33 @@ public:
 		m_ph = hpposmodf(m_ph);
 		return outputf;
 	}
-	shared_ptr<HPNoiseDetModel> m_nmodel;
+	shared_ptr<HPNoiseChipModel> m_nmodel;
 };
 
-inline unique_ptr<HPNode> instantiateNoiseDet(HPModel* model, int model_i) {
-	return make_unique<HPNoiseDet>(
+inline unique_ptr<HPNode> instantiateNoiseChip(HPModel* model, int model_i) {
+	return make_unique<HPNoiseChip>(
 		model,
 		model_i,
-		static_pointer_cast<HPNoiseDetModel>(model->m_nodes[model_i])
+		static_pointer_cast<HPNoiseChipModel>(model->m_nodes[model_i])
 	);
 }
 
-class HPNoiseDetView : public HPNodeView {
+class HPNoiseChipView : public HPNodeView {
 public:
-	HPNoiseDetView(HPView* view) :
+	HPNoiseChipView(HPView* view) :
 			m_mingle(new LcdSpinBox(5, view, "mingle factor"))
 	{
 		m_widgets.emplace_back(m_mingle);
 	}
 	void setModel(weak_ptr<HPModel::Node> nmodel) {
-		auto modelCast = static_cast<HPNoiseDetModel*>(nmodel.lock().get());
+		auto modelCast = static_cast<HPNoiseChipModel*>(nmodel.lock().get());
 		m_mingle->setModel(&modelCast->m_mingle);
 	}
 private:
 	LcdSpinBox *m_mingle;
 };
 
-using Definition = HPDefinition<HPNoiseDetModel>;
+using Definition = HPDefinition<HPNoiseChipModel>;
 
 template<> Definition::HPDefinition(HPInstrument* instrument) :
 		HPDefinitionBase(instrument)
@@ -152,14 +152,14 @@ template<> Definition::HPDefinition(HPInstrument* instrument) :
 
 template<> Definition::~HPDefinition() = default;
 
-template<> string Definition::name() { return NOISE_DET_NAME; }
+template<> string Definition::name() { return NOISE_CHIP_NAME; }
 
-template<> unique_ptr<HPNoiseDetModel> Definition::newNodeImpl() {
-	return make_unique<HPNoiseDetModel>(m_instrument);
+template<> unique_ptr<HPNoiseChipModel> Definition::newNodeImpl() {
+	return make_unique<HPNoiseChipModel>(m_instrument);
 }
 
 template<> unique_ptr<HPNodeView> Definition::instantiateView(HPView* hpview) {
-	return make_unique<HPNoiseDetView>(hpview);
+	return make_unique<HPNoiseChipView>(hpview);
 }
 
 } // namespace lmms::hyperpipe
