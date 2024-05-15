@@ -35,22 +35,26 @@ inline unique_ptr<HPNode> instantiateNoiseChip(HPModel* model, int model_i);
 struct HPNoiseChipModel : public HPModel::Node {
 	HPNoiseChipModel(Instrument* instrument) :
 			HPModel::Node(instrument),
-			m_mingle(
-				57,
-				1, 0xffff, instrument, QString("mingle factor"))
+			m_mingle_factor(
+				65473,
+				1, 0xffff, instrument, QString("mingle factor")),
+			m_mingle_bits(true, instrument, QString("mingle bits"))
 	{}
-	IntModel m_mingle;
+	IntModel m_mingle_factor;
+	BoolModel m_mingle_bits;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateNoiseChip(model, model_i);
 	}
 	string name() { return NOISE_CHIP_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_mingle.loadSettings(elem, is + "_mingle");
+		m_mingle_factor.loadSettings(elem, is + "_mingle_factor");
+		m_mingle_bits.loadSettings(elem, is + "_mingle_bits");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_mingle.saveSettings(doc, elem, is + "_mingle");
+		m_mingle_factor.saveSettings(doc, elem, is + "_mingle_factor");
+		m_mingle_bits.saveSettings(doc, elem, is + "_mingle_bits");
 	}
 	bool usesPrev() { return false; }
 };
@@ -66,27 +70,29 @@ public:
 	{}
 	float processFrame(Params p) {
 		uint16_t iter = m_iter < 0 ? -m_iter : m_iter;
-		iter *= m_nmodel->m_mingle.value();
+		iter *= m_nmodel->m_mingle_factor.value();  // mingle the sequence
 		uint16_t gray = iter ^ (iter >> 1);  // https://de.wikipedia.org/wiki/Gray-Code#Generierung
-		// mingle, bitwise
-		if (iter & 1) {
-			iter = 0;
-			for (uint8_t b = 0; b < 8; b++) {
-				uint16_t bit = (gray >> b) & 1;
-				if (b & 1) {
-					bit = (~bit) & 1;
+		// mingle the output, bitwise
+		if (m_nmodel->m_mingle_bits.value()) {
+			if (iter & 1) {
+				iter = 0;
+				for (uint8_t b = 0; b < 8; b++) {
+					uint16_t bit = (gray >> b) & 1;
+					if (b & 1) {
+						bit = (~bit) & 1;
+					}
+					iter |= bit << b;
 				}
-				iter |= bit << b;
 			}
-		}
-		else {
-			iter = 0;
-			for (uint8_t b = 0; b < 8; b++) {
-				uint16_t bit = (gray >> b) & 1;
-				if (!(b & 1)) {
-					bit = (~bit) & 1;
+			else {
+				iter = 0;
+				for (uint8_t b = 0; b < 8; b++) {
+					uint16_t bit = (gray >> b) & 1;
+					if (!(b & 1)) {
+						bit = (~bit) & 1;
+					}
+					iter |= bit << b;
 				}
-				iter |= bit << b;
 			}
 		}
 		// determine which bits to output
@@ -130,16 +136,21 @@ inline unique_ptr<HPNode> instantiateNoiseChip(HPModel* model, int model_i) {
 class HPNoiseChipView : public HPNodeView {
 public:
 	HPNoiseChipView(HPView* view) :
-			m_mingle(new LcdSpinBox(5, view, "mingle factor"))
+			m_mingle_factor(new LcdSpinBox(5, view, "mingle factor")),
+			m_mingle_bits(new LedCheckBox(view, "mingle bits"))
 	{
-		m_widgets.emplace_back(m_mingle);
+		m_widgets.emplace_back(m_mingle_factor);
+		m_mingle_bits->move(70, 0);
+		m_widgets.emplace_back(m_mingle_bits);
 	}
 	void setModel(weak_ptr<HPModel::Node> nmodel) {
 		auto modelCast = static_cast<HPNoiseChipModel*>(nmodel.lock().get());
-		m_mingle->setModel(&modelCast->m_mingle);
+		m_mingle_factor->setModel(&modelCast->m_mingle_factor);
+		m_mingle_bits->setModel(&modelCast->m_mingle_bits);
 	}
 private:
-	LcdSpinBox *m_mingle;
+	LcdSpinBox *m_mingle_factor;
+	LedCheckBox *m_mingle_bits;
 };
 
 using Definition = HPDefinition<HPNoiseChipModel>;
