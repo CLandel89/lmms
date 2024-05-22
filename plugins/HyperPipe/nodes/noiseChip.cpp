@@ -35,71 +35,55 @@ inline unique_ptr<HPNode> instantiateNoiseChip(HPModel* model, int model_i);
 struct HPNoiseChipModel : public HPModel::Node {
 	HPNoiseChipModel(Instrument* instrument) :
 			HPModel::Node(instrument),
-			m_mingle_factor(
-				65473,
-				1, 0xffff, instrument, QString("mingle factor")),
-			m_mingle_bits(true, instrument, QString("mingle bits"))
+			m_seed(1, 1, 0xffff, instrument, QString("seed")),
+			m_mul(false, instrument, QString("multiplication instead of RNG"))
 	{}
-	IntModel m_mingle_factor;
-	BoolModel m_mingle_bits;
+	IntModel m_seed;
+	BoolModel m_mul;
 	unique_ptr<HPNode> instantiate(HPModel* model, int model_i) {
 		return instantiateNoiseChip(model, model_i);
 	}
 	string name() { return NOISE_CHIP_NAME; }
 	void load(int model_i, const QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_mingle_factor.loadSettings(elem, is + "_mingle_factor");
-		m_mingle_bits.loadSettings(elem, is + "_mingle_bits");
+		m_seed.loadSettings(elem, is + "_seed");
+		m_mul.loadSettings(elem, is + "_mul");
 	}
 	void save(int model_i, QDomDocument& doc, QDomElement& elem) {
 		QString is = "n" + QString::number(model_i);
-		m_mingle_factor.saveSettings(doc, elem, is + "_mingle_factor");
-		m_mingle_bits.saveSettings(doc, elem, is + "_mingle_bits");
+		m_seed.saveSettings(doc, elem, is + "_seed");
+		m_mul.saveSettings(doc, elem, is + "_mul");
 	}
 	bool usesPrev() { return false; }
 };
 
 class HPNoiseChip : public HPNode
 {
+	HPcbrng m_rng;
 	int32_t m_iter = 0;  // if ph and iter aren't separate, audible glitches will occur
 	float m_ph = 0;
 public:
 	HPNoiseChip(HPModel* model, int model_i, shared_ptr<HPNoiseChipModel> nmodel) :
 			HPNode(),
+			m_rng(nmodel->m_seed.value()),
 			m_nmodel(nmodel)
 	{}
 	float processFrame(Params p) {
 		uint16_t iter = m_iter < 0 ? -m_iter : m_iter;
-		iter *= m_nmodel->m_mingle_factor.value();  // mingle the sequence
-		uint16_t gray = iter ^ (iter >> 1);  // https://de.wikipedia.org/wiki/Gray-Code#Generierung
-		// mingle the output, bitwise
-		if (m_nmodel->m_mingle_bits.value()) {
-			if (iter & 1) {
-				iter = 0;
-				for (uint8_t b = 0; b < 8; b++) {
-					uint16_t bit = (gray >> b) & 1;
-					if (b & 1) {
-						bit = (~bit) & 1;
-					}
-					iter |= bit << b;
-				}
-			}
-			else {
-				iter = 0;
-				for (uint8_t b = 0; b < 8; b++) {
-					uint16_t bit = (gray >> b) & 1;
-					if (!(b & 1)) {
-						bit = (~bit) & 1;
-					}
-					iter |= bit << b;
-				}
-			}
+		// mingle
+		if (m_nmodel->m_mul.value()) {
+			iter *= m_nmodel->m_seed.value();
 		}
+		else {
+			iter = m_rng(iter);
+		}
+		// involve Gray-Code
+		iter = iter ^ (iter >> 1);  // https://de.wikipedia.org/wiki/Gray-Code#Generierung
 		// determine which bits to output
 		const float hph = hpposmodf(2*p.ph);
 		uint8_t step = 4 * hpposmodf(hph);
 		if (p.ph >= 0.5f) {
-			// the second half is backwards and mirrored
+			// the second half is backwards
 			step = 3 - step;
 		}
 		uint8_t output = (iter >> (step*4)) & 0xf;
@@ -112,6 +96,7 @@ public:
 		// inner state, output
 		float outputf;
 		if (p.ph >= 0.5f) {
+			// the second half is flipped
 			outputf = -1 + 2.0f * output / 0xf;
 		}
 		else {
@@ -136,21 +121,21 @@ inline unique_ptr<HPNode> instantiateNoiseChip(HPModel* model, int model_i) {
 class HPNoiseChipView : public HPNodeView {
 public:
 	HPNoiseChipView(HPView* view) :
-			m_mingle_factor(new LcdSpinBox(5, view, "mingle factor")),
-			m_mingle_bits(new LedCheckBox(view, "mingle bits"))
+			m_seed(new LcdSpinBox(5, view, "seed")),
+			m_mul(new LedCheckBox(view, "multiplication instead of RNG"))
 	{
-		m_widgets.emplace_back(m_mingle_factor);
-		m_mingle_bits->move(70, 0);
-		m_widgets.emplace_back(m_mingle_bits);
+		m_widgets.emplace_back(m_seed);
+		m_mul->move(70, 0);
+		m_widgets.emplace_back(m_mul);
 	}
 	void setModel(weak_ptr<HPModel::Node> nmodel) {
 		auto modelCast = static_cast<HPNoiseChipModel*>(nmodel.lock().get());
-		m_mingle_factor->setModel(&modelCast->m_mingle_factor);
-		m_mingle_bits->setModel(&modelCast->m_mingle_bits);
+		m_seed->setModel(&modelCast->m_seed);
+		m_mul->setModel(&modelCast->m_mul);
 	}
 private:
-	LcdSpinBox *m_mingle_factor;
-	LedCheckBox *m_mingle_bits;
+	LcdSpinBox *m_seed;
+	LedCheckBox *m_mul;
 };
 
 using Definition = HPDefinition<HPNoiseChipModel>;

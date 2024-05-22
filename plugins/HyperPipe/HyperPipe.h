@@ -39,6 +39,7 @@
 #include "Song.h"
 
 #include <map>
+#include <random>
 #include <stdexcept>
 #include <vector>
 
@@ -338,6 +339,35 @@ struct HPTuneModel;
 
 // any ad-hoc utilities
 namespace lmms::hyperpipe {
+
+/**  A counter-based pseudo-random number generator for noise,
+  *  built on std::minstd_rand.  */
+class HPcbrng {
+	uint16_t m_seed;
+	uint32_t m_last_c = 123;
+	uint16_t m_last_out;
+public:
+	HPcbrng(uint16_t seed) :
+		m_seed(seed),
+		m_last_out((*this)(0))
+	{}
+	uint16_t operator()(uint32_t c) {
+		if (c == m_last_c) {
+			return m_last_out;
+		}
+		// calculate result
+		minstd_rand rng(c + m_seed * 0x10000);
+		uint32_t result = 0;
+		for (int _ = 0; _ < 8; _++) {
+			result ^= rng();
+		}
+		result = result ^ (result >> 0x10);
+		// update state and return result
+		m_last_c = c;
+		m_last_out = result;
+		return result;
+	}
+};
 
 inline float hpposmodf(float a, float b = 1) {
 	return fmod(fmod(a, b) + b, b);
