@@ -91,14 +91,14 @@ public:
 			m_prev(model->instantiatePrev(model_i))
 	{
 		sp_create(&m_sp);
-		m_srate_tmp = Engine::audioEngine()->processingSampleRate();
+		m_srate_tmp = Engine::audioEngine()->outputSampleRate();
 		m_sp->sr = m_srate_tmp;
 		sp_revsc_create(&m_revsc);
 		sp_revsc_init(m_sp, m_revsc);
 		sp_dcblock_create(&m_dcblk[0]);
 		sp_dcblock_create(&m_dcblk[1]);
-		sp_dcblock_init(m_sp, m_dcblk[0], Engine::audioEngine()->currentQualitySettings().sampleRateMultiplier());
-		sp_dcblock_init(m_sp, m_dcblk[1], Engine::audioEngine()->currentQualitySettings().sampleRateMultiplier());
+		sp_dcblock_init(m_sp, m_dcblk[0], 1);
+		sp_dcblock_init(m_sp, m_dcblk[1], 1);
 	}
 	~HPReverbSC() {
 		sp_revsc_destroy(&m_revsc);
@@ -151,8 +151,8 @@ private:
 		sp_revsc_init(m_sp, m_revsc);
 		sp_dcblock_create(&m_dcblk[0]);
 		sp_dcblock_create(&m_dcblk[1]);
-		sp_dcblock_init(m_sp, m_dcblk[0], Engine::audioEngine()->currentQualitySettings().sampleRateMultiplier());
-		sp_dcblock_init(m_sp, m_dcblk[1], Engine::audioEngine()->currentQualitySettings().sampleRateMultiplier());
+		sp_dcblock_init(m_sp, m_dcblk[0], 1);
+		sp_dcblock_init(m_sp, m_dcblk[1], 1);
 	}
 	void resetState() override {
 		HPNode::resetState();

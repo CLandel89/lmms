@@ -88,7 +88,7 @@ QString HPInstrument::nodeName() const {
 	return HyperPipe_plugin_descriptor.name;
 }
 
-void HPInstrument::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
+void HPInstrument::playNote(NotePlayHandle* nph, SampleFrame* working_buffer)
 {
 	if (nph->totalFramesPlayed() == 0 || nph->m_pluginData == nullptr) {
 		if (nph->m_pluginData != nullptr) {
@@ -100,9 +100,11 @@ void HPInstrument::playNote(NotePlayHandle* nph, sampleFrame* working_buffer)
 	const fpp_t frames = nph->framesLeftForCurrentPeriod();
 	const f_cnt_t offset = nph->noteOffset();
 	const float freq = nph->frequency();
-	const float srate = Engine::audioEngine()->processingSampleRate();
+	const float srate = Engine::audioEngine()->outputSampleRate();
 	for (int i = 0; i < frames; i++) {
-		working_buffer[offset + i] = synth->processFrame(freq, srate);
+		auto pf = synth->processFrame(freq, srate);
+		working_buffer[offset + i][0] = pf[0];
+		working_buffer[offset + i][1] = pf[1];
 	}
 }
 

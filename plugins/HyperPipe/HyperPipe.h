@@ -160,7 +160,7 @@ public:
 	HPInstrument(InstrumentTrack* track);
 	~HPInstrument() override = default;
 	void chNodeType(string nodeType, int model_i);
-	void playNote(NotePlayHandle* nph, sampleFrame* working_buffer) override;
+	void playNote(NotePlayHandle* nph, SampleFrame* working_buffer) override;
 	void deleteNotePluginData(NotePlayHandle* nph) override;
 	void saveSettings(QDomDocument& doc, QDomElement& elem) override;
 	void loadSettings(const QDomElement& elem) override;

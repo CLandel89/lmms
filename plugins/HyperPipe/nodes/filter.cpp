@@ -65,7 +65,7 @@ public:
 	HPFilter(HPModel* model, int model_i, shared_ptr<HPFilterModel> nmodel) :
 			m_nmodel(nmodel),
 			m_prev(model->instantiatePrev(model_i)),
-			m_srate_tmp(Engine::audioEngine()->processingSampleRate()),
+			m_srate_tmp(Engine::audioEngine()->outputSampleRate()),
 			m_basicFilters(m_srate_tmp)
 	{
 		m_basicFilters.setFilterType(m_filterType);
