@@ -156,11 +156,11 @@ using DistFX = DspEffectLibrary::Distortion;
 using SweepOsc = KickerOsc<DspEffectLibrary::MonoToStereoAdaptor<DistFX>>;
 
 void KickerInstrument::playNote( NotePlayHandle * _n,
-						sampleFrame * _working_buffer )
+						SampleFrame* _working_buffer )
 {
 	const fpp_t frames = _n->framesLeftForCurrentPeriod();
 	const f_cnt_t offset = _n->noteOffset();
-	const float decfr = m_decayModel.value() * Engine::audioEngine()->processingSampleRate() / 1000.0f;
+	const float decfr = m_decayModel.value() * Engine::audioEngine()->outputSampleRate() / 1000.0f;
 	const f_cnt_t tfp = _n->totalFramesPlayed();
 
 	if (!_n->m_pluginData)
@@ -184,7 +184,7 @@ void KickerInstrument::playNote( NotePlayHandle * _n,
 	}
 
 	auto so = static_cast<SweepOsc*>(_n->m_pluginData);
-	so->update( _working_buffer + offset, frames, Engine::audioEngine()->processingSampleRate() );
+	so->update( _working_buffer + offset, frames, Engine::audioEngine()->outputSampleRate() );
 
 	if( _n->isReleased() )
 	{
