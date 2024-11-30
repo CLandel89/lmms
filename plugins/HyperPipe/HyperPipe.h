@@ -328,6 +328,7 @@ struct HPNoiseModel;
 struct HPNoiseChipModel;
 struct HPOrganifyModel;
 struct HPOverdriveModel;
+struct HPReverbRingModel;
 struct HPReverbSCModel;
 struct HPShapesModel;
 struct HPSineModel;

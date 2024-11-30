@@ -15,6 +15,7 @@ BUILD_PLUGIN(HyperPipe
 	nodes/noiseChip.cpp
 	nodes/organify.cpp
 	nodes/overdrive.cpp
+	nodes/reverbRing.cpp
 	nodes/reverbSC.cpp
 	nodes/reverbSC/base.c nodes/reverbSC/revsc.c nodes/reverbSC/base.h nodes/reverbSC/revsc.h nodes/reverbSC/dcblock.h nodes/reverbSC/dcblock.c
 	nodes/sine.cpp

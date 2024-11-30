@@ -70,6 +70,7 @@ inline map<string, unique_ptr<HPDefinitionBase>> createDefinitions(HPInstrument*
 	createDefinition<HPOrganifyModel>(definitions, instrument);
 	createDefinition<HPOverdriveModel>(definitions, instrument);
 	createDefinition<HPReverbSCModel>(definitions, instrument);
+	createDefinition<HPReverbRingModel>(definitions, instrument);
 	createDefinition<HPShapesModel>(definitions, instrument);
 	createDefinition<HPSineModel>(definitions, instrument);
 	createDefinition<HPSquareModel>(definitions, instrument);
