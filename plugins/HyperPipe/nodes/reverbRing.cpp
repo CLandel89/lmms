@@ -141,10 +141,10 @@ private:
 	{
 		float clipDb = m_nmodel->m_clipDb.value();
 		float fback = m_nmodel->m_fback.value();
-		float factor = m_nmodel->m_factor.value();
+		float factor = _attenuatedFactor(p);
 
 		m_buf[pass][m_buf_i] *= 1-factor + fback/100;
-		m_buf[pass][m_buf_i] += factor * dry;
+		m_buf[pass][m_buf_i] += factor * _attenuatingAmp(p) * dry;
 
 		float maxAmp = powf(10, clipDb / 20);
 		if (m_buf[pass][m_buf_i] > maxAmp) {
@@ -155,6 +155,24 @@ private:
 		}
 
 		return m_buf[pass][m_buf_i];
+	}
+
+	float _attenuatedFactor (Params p) {
+		float original = m_nmodel->m_factor.value();
+		float freqRatio = p.freq / 440;
+		// the graph of the formula below is a bow that cuts the y-axis
+		// with a result value of 1.0; at A4, the original value is kept;
+		// higher notes are assigned result values that get close to 0.0
+		return 1 / (1 - freqRatio + freqRatio/original);
+	}
+
+	float _attenuatingAmp (Params p) {
+		float freqRatio = p.freq / 440;
+		// the formula below yields most values close to 1.0,
+		// varying just so much that lower/higher notes have
+		// about the same loudness
+		// (found / adapted by trial and error)
+		return (9 + 2*sqrtf(freqRatio)) / 11;
 	}
 
 	void _adaptToPassesIfNeeded() {
